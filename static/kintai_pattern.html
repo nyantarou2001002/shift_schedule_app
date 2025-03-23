@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  <title>従業員設定</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+  <title>勤怠パターン一覧</title>
   <!-- Bootstrap CSS -->
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
   <style>
@@ -15,7 +15,7 @@
     .card {
       border: none;
       border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     .card-header {
       background-color: #007bff;
@@ -27,14 +27,10 @@
     .table th, .table td {
       vertical-align: middle;
     }
-    /* ドラッグ中の行の見た目（任意） */
-    .dragging {
-      opacity: 0.5;
-    }
   </style>
 </head>
 <body>
-  <!-- ナビゲーションバー -->
+    <!-- ナビゲーションバー -->
   <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
     <a class="navbar-brand" href="#">シフト表作成アプリ</a>
     <!-- 必要に応じてメニュー項目を追加 -->
@@ -48,66 +44,65 @@
         <li class="nav-item">
           <a class="nav-link" href="index.html">ホーム</a>
         </li>
-        <li class="nav-item active">
+        <li class="nav-item">
           <a class="nav-link" href="setting.html">従業員設定</a>
         </li>
-        <li class="nav-item">
+        <li class="nav-item active">
           <a class="nav-link" href="kintai_pattern.html">勤怠パターン</a>
         </li>
       </ul>
     </div>
   </nav>
-  <div class="container mt-5">
 
-    <!-- 従業員追加フォーム -->
+  <div class="container mt-5">
+  
+    <!-- 新規勤怠パターン追加フォーム -->
     <div class="card mb-4">
       <div class="card-header">
-        <h4 class="mb-0">従業員追加</h4>
+        <h4 class="mb-0">新規勤怠パターン追加</h4>
       </div>
       <div class="card-body">
-        <form id="addEmployeeForm">
+        <form id="addKintaiPatternForm">
           <div class="form-group">
-            <label for="employeeName">名前 <span style="color:red;">*</span></label>
-            <input type="text" class="form-control" id="employeeName" placeholder="名前を入力" required>
+            <label for="patternName">パターン名 <span style="color:red;">*</span></label>
+            <input type="text" class="form-control" id="patternName" placeholder="パターン名を入力" required>
           </div>
           <div class="form-group">
-            <label for="employeeMemo">メモ</label>
-            <textarea class="form-control" id="employeeMemo" rows="2" placeholder="任意でメモを入力"></textarea>
+            <label for="description">説明</label>
+            <textarea class="form-control" id="description" rows="2" placeholder="説明を入力"></textarea>
           </div>
           <button type="submit" class="btn btn-primary">追加</button>
         </form>
       </div>
     </div>
-
-    <!-- 従業員一覧 -->
+    
+    <!-- 勤怠パターン一覧 -->
     <div class="card">
       <div class="card-header">
-        <h4 class="mb-0">従業員一覧</h4>
+        <h4 class="mb-0">勤怠パターン一覧</h4>
       </div>
       <div class="card-body">
-        <table class="table table-hover" id="employeesTable">
+        <table class="table table-hover" id="patternTable">
           <thead>
             <tr>
-              <th>名前</th>
-              <th>メモ</th>
+              <th>パターン名</th>
+              <th>説明</th>
               <th>操作</th>
             </tr>
           </thead>
           <tbody>
-            <!-- setting.js で従業員データが挿入されます -->
+            <!-- kintai_pattern.js によりデータが挿入されます -->
           </tbody>
         </table>
       </div>
     </div>
-
+  
   </div>
-
-  <!-- jQueryとBootstrapのJS -->
+  
+  <!-- jQuery と Bootstrap の JS -->
   <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
-  <!-- Sortable.js の読み込み -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.14.0/Sortable.min.js"></script>
-  <!-- setting.js の読み込み -->
-  <script src="js/setting.js"></script>
+  <!-- kintai_pattern.js の読み込み -->
+  <script src="js/kintai_pattern.js"></script>
 </body>
 </html>
