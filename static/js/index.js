@@ -226,6 +226,88 @@ document.addEventListener('DOMContentLoaded', function() {
     selectedCell = null;
   }
   
+  // シフト削除時の処理を修正
+function handleDeleteShift() {
+  if (!selectedCell) {
+    console.error('選択されたセルがありません');
+    return;
+  }
+  
+  // 現在のパターン情報を取得
+  const patternId = parseInt(selectedCell.getAttribute('data-pattern-id')) || 0;
+  if (patternId === 0) {
+    // 既に空の場合は何もしない
+    $('#patternSelectModal').modal('hide');
+    selectedCell = null;
+    return;
+  }
+  
+  // シフト情報を取得
+  const td = selectedCell.parentElement;
+  const employeeId = parseInt(td.getAttribute('data-employee-id'));
+  const date = td.getAttribute('data-date');
+  const shiftTime = td.getAttribute('data-shift-time');
+  
+  console.log(`シフト削除リクエスト: 従業員ID=${employeeId}, 日付=${date}, 時間帯=${shiftTime}`);
+  
+  // セルの参照をローカル変数に保存（非同期処理内で安全に参照するため）
+  const cellToUpdate = selectedCell;
+  
+  // モーダルを閉じる - 先に閉じることでエラー回避
+  $('#patternSelectModal').modal('hide');
+  
+  // selectedCell をリセット
+  selectedCell = null;
+  
+  // APIにデータを送信して削除
+  fetch('/api/deleteShift', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      employee_id: employeeId,
+      date: date,
+      shift_time: shiftTime
+    })
+  })
+  .then(response => {
+    if (!response.ok) {
+      return response.text().then(text => {
+        throw new Error(`サーバーエラー (${response.status}): ${text}`);
+      });
+    }
+    return response.json();
+  })
+  .then(result => {
+    console.log('シフト削除成功:', result);
+    
+    // 成功したら表示を更新（ローカル変数を使用）
+    if (cellToUpdate) {
+      cellToUpdate.textContent = '';
+      cellToUpdate.setAttribute('data-shift', '');
+      cellToUpdate.setAttribute('data-pattern-id', '0');
+      updateShiftCellStyle(cellToUpdate);
+    }
+    
+    // シフトデータも更新
+    const key = `${employeeId}_${date}_${shiftTime}`;
+    delete shiftsData[key];
+  })
+  .catch(error => {
+    console.error('シフト削除エラー:', error);
+    
+    // エラーが発生しても表示だけ更新（ローカル変数を使用）
+    if (cellToUpdate) {
+      cellToUpdate.textContent = '';
+      cellToUpdate.setAttribute('data-shift', '');
+      cellToUpdate.setAttribute('data-pattern-id', '0');
+      updateShiftCellStyle(cellToUpdate);
+    }
+  });
+}
+
+
   // シフトセルの見た目を更新する関数
   function updateShiftCellStyle(cell) {
     // 一旦すべてのクラスをリセット
@@ -380,12 +462,14 @@ document.addEventListener('DOMContentLoaded', function() {
           const date = td.getAttribute('data-date');
           const shiftTime = td.getAttribute('data-shift-time');
           const patternName = this.getAttribute('data-shift');
+          const patternId = parseInt(this.getAttribute('data-pattern-id')) || 0;
           
           console.log('セルをクリックしました。', {
             従業員ID: employeeId,
             日付: date,
             時間帯: shiftTime,
-            現在のパターン: patternName
+            現在のパターン: patternName,
+            パターンID: patternId
           });
           
           // 背景色を一時的に変更して視覚的フィードバックを提供
@@ -404,6 +488,17 @@ document.addEventListener('DOMContentLoaded', function() {
           
           // クリックされたセルを記憶
           selectedCell = this;
+          
+          // 削除ボタンの表示/非表示を制御
+          const deleteShiftContainer = document.getElementById('deleteShiftContainer');
+          if (deleteShiftContainer) {
+            // パターンIDが設定されている場合のみ削除ボタンを表示
+            if (patternId > 0) {
+              deleteShiftContainer.style.display = 'block';
+            } else {
+              deleteShiftContainer.style.display = 'none';
+            }
+          }
           
           // モーダルで勤怠パターン選択を表示
           $('#patternSelectModal').modal('show');
@@ -428,6 +523,14 @@ document.addEventListener('DOMContentLoaded', function() {
       .then(() => generateCalendar(currentYear, currentMonth, 'rightCalendar'));
   }
   
+  // 削除ボタンのイベントリスナーを追加
+  const deleteShiftBtn = document.getElementById('deleteShiftBtn');
+  if (deleteShiftBtn) {
+    deleteShiftBtn.addEventListener('click', function() {
+      handleDeleteShift();
+    });
+  }
+  
   // 初期データ取得
   fetchData();
   
@@ -438,6 +541,17 @@ document.addEventListener('DOMContentLoaded', function() {
     // モーダルが正しく初期化されていることを確認
     $('#patternSelectModal').on('show.bs.modal', function() {
       console.log('モーダル表示イベント');
+      
+      // 削除ボタンの表示/非表示を初期状態としてセット
+      const deleteShiftContainer = document.getElementById('deleteShiftContainer');
+      if (deleteShiftContainer && selectedCell) {
+        const patternId = parseInt(selectedCell.getAttribute('data-pattern-id')) || 0;
+        if (patternId > 0) {
+          deleteShiftContainer.style.display = 'block';
+        } else {
+          deleteShiftContainer.style.display = 'none';
+        }
+      }
     });
   } else {
     console.error('jQuery が読み込まれていません！');

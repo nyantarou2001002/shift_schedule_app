@@ -26,6 +26,7 @@ func main() {
 	// シフト関連のエンドポイントを追加
 	http.HandleFunc("/api/shifts", handlers.GetShiftsHandler)
 	http.HandleFunc("/api/updateShift", handlers.UpdateShiftHandler)
+	http.HandleFunc("/api/deleteShift", handlers.DeleteShiftHandler)
 
 	// 静的ファイルサーバー
 	http.Handle("/", http.FileServer(http.Dir("./static")))

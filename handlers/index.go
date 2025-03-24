@@ -152,3 +152,69 @@ func UpdateShiftHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(result)
 }
+
+// DeleteShiftHandler はシフトを削除するハンドラーです
+func DeleteShiftHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	log.Println("DeleteShiftHandler called")
+
+	// リクエストボディからデータをデコード
+	var request struct {
+		EmployeeID int    `json:"employee_id"`
+		Date       string `json:"date"`
+		ShiftTime  string `json:"shift_time"`
+	}
+
+	err := json.NewDecoder(r.Body).Decode(&request)
+	if err != nil {
+		log.Printf("Error decoding request body: %v", err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	log.Printf("Deleting shift: employee_id=%d, date=%s, shift_time=%s",
+		request.EmployeeID, request.Date, request.ShiftTime)
+
+	// employee_id を staff_id として使用
+	staffID := request.EmployeeID
+
+	// 削除対象のシフトを検索
+	var shiftID int
+	err = db.DB.QueryRow(`
+        SELECT id FROM shifts 
+        WHERE staff_id = ? AND date = ? AND shift_time = ?
+    `, staffID, request.Date, request.ShiftTime).Scan(&shiftID)
+
+	if err != nil {
+		log.Printf("Shift not found: %v", err)
+		// シフトが見つからない場合は正常に200 OKを返す（冪等性を保つため）
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": true,
+			"message": "Shift not found or already deleted",
+		})
+		return
+	}
+
+	// シフトを削除
+	_, err = db.DB.Exec("DELETE FROM shifts WHERE id = ?", shiftID)
+	if err != nil {
+		log.Printf("Error deleting shift: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("Shift deleted successfully: ID=%d", shiftID)
+
+	// 成功レスポンスを返す
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"id":      shiftID,
+		"message": "Shift deleted successfully",
+	})
+}

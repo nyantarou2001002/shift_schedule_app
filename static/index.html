@@ -135,8 +135,7 @@
     </div>
   </div>
 
-   <!-- この部分を確認してください。モーダルが入っているか -->
-  <!-- 勤怠パターン選択用モーダル -->
+  <!-- 勤怠パターン選択用モーダル部分を修正 -->
   <div class="modal fade" id="patternSelectModal" tabindex="-1" role="dialog" aria-labelledby="patternSelectModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-sm" role="document">
       <div class="modal-content">
@@ -150,6 +149,13 @@
           <ul class="list-group" id="patternList">
             <!-- 勤怠パターンは動的に生成 -->
           </ul>
+          
+          <!-- 削除ボタンを追加 -->
+          <div class="mt-3 text-center" id="deleteShiftContainer">
+            <button type="button" id="deleteShiftBtn" class="btn btn-danger">
+              シフトを削除
+            </button>
+          </div>
         </div>
       </div>
     </div>

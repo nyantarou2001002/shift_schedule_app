@@ -141,3 +141,36 @@
   color: #fd7e14;
   font-weight: bold;
 }
+
+/* 削除ボタンのスタイル */
+#deleteShiftBtn {
+  width: 100%;
+  margin-top: 1rem;
+  border-radius: 4px;
+  transition: all 0.3s;
+}
+
+#deleteShiftBtn:hover {
+  background-color: #c82333;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+#deleteShiftBtn:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+/* パターンリスト項目のスタイル強化 */
+.pattern-item {
+  cursor: pointer;
+  padding: 10px 15px;
+  transition: background-color 0.2s;
+  border-left: 3px solid transparent;
+}
+
+.pattern-item:hover {
+  background-color: #f0f0f0;
+  font-weight: bold;
+  border-left-color: #007bff;
+}
