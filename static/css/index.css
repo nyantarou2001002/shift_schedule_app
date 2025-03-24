@@ -1,0 +1,84 @@
+/* 追加：カレンダーコンテナの横スクロール制限 */
+.calendar-container {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: auto;
+    max-height: 70vh;
+    position: relative;
+  }
+  
+  /* 追加：カレンダー本体のサイズ制限を解除 */
+  #leftCalendar, #rightCalendar {
+    overflow: visible;
+    padding: 0;
+  }
+  
+  /* 左側コンテナが右側にはみ出さないように制限 */
+  .divider-right .container {
+    max-width: 100%;
+    padding-right: 15px;
+  }
+  
+  /* 横スクロールバーのスタイル調整 */
+  .calendar-container::-webkit-scrollbar {
+    height: 10px;
+    width: 10px;
+  }
+  
+  .calendar-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 5px;
+  }
+  
+  .calendar-container::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 5px;
+  }
+  
+  .calendar-container::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+  }
+  
+  /* 既存のスタイル（変更なし） */
+  .shift-time-label {
+    background-color: #f2f2f2;
+    font-weight: bold;
+    font-size: 0.8rem;
+    width: 40px;
+    text-align: center;
+  }
+  
+  .time-morning {
+    background-color: rgba(255, 248, 230, 0.2);
+  }
+  
+  .time-day {
+    background-color: rgba(255, 255, 255, 0.2);
+  }
+  
+  .time-night {
+    background-color: rgba(230, 240, 255, 0.2);
+  }
+  
+  /* 日付セルの縦の高さを調整 */
+  .horizontal-calendar td.date-cell {
+    vertical-align: middle;
+    position: relative;
+    min-width: 70px;
+  }
+  
+  /* 日付セル内の文字サイズ調整 */
+  .horizontal-calendar .date-cell {
+    font-size: 0.9rem;
+    font-weight: bold;
+  }
+  
+  /* 隣接するセル間の境界線をわずかに濃く */
+  .horizontal-calendar tr.time-night {
+    border-bottom: 2px solid #dee2e6;
+  }
+  
+  /* 各行の高さを少し小さく */
+  .horizontal-calendar tr {
+    height: 38px;
+  }

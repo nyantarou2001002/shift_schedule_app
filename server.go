@@ -23,6 +23,10 @@ func main() {
 	http.HandleFunc("/api/addKintaiPattern", handlers.AddKintaiPatternHandler)
 	http.HandleFunc("/api/deleteKintaiPattern", handlers.DeleteKintaiPatternHandler)
 
+	// シフト関連のエンドポイントを追加
+	http.HandleFunc("/api/shifts", handlers.GetShiftsHandler)
+	http.HandleFunc("/api/updateShift", handlers.UpdateShiftHandler)
+
 	// 静的ファイルサーバー
 	http.Handle("/", http.FileServer(http.Dir("./static")))
 
