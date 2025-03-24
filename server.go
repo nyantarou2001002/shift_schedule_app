@@ -27,6 +27,7 @@ func main() {
 	http.HandleFunc("/api/shifts", handlers.GetShiftsHandler)
 	http.HandleFunc("/api/updateShift", handlers.UpdateShiftHandler)
 	http.HandleFunc("/api/deleteShift", handlers.DeleteShiftHandler)
+	http.HandleFunc("/api/markShiftAsRightDeleted", handlers.MarkShiftAsRightDeletedHandler)
 
 	// シミュレーション用シフト関連のエンドポイント
 	http.HandleFunc("/api/shifts_simulation", handlers.GetShiftsSimulationHandler)

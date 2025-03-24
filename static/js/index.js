@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', function() {
     monthDisplay.textContent = formatDisplayMonth(currentYear, currentMonth);
   }
   
-  // データ取得関数も修正
+  // データ取得関数を修正
 function fetchData() {
   // 勤怠パターンを取得
   fetch('/api/kintai_patterns')
@@ -77,8 +77,11 @@ function fetchData() {
       // 右側シフトデータをキーで整理
       rightShiftsData = {};
       data.forEach(shift => {
-        const key = `${shift.employee_id}_${shift.date}_${shift.shift_time}`;
-        rightShiftsData[key] = shift;
+        // right_deletedがtrueのシフトは右側に表示しない
+        if (!shift.right_deleted) {
+          const key = `${shift.employee_id}_${shift.date}_${shift.shift_time}`;
+          rightShiftsData[key] = shift;
+        }
       });
       
       console.log('両カレンダーのシフトデータ取得完了:', {
@@ -91,6 +94,7 @@ function fetchData() {
     })
     .catch(error => console.error('データ取得エラー:', error));
 }
+
   
   // 月セレクターの変更イベント
   if (monthSelector) {
@@ -283,48 +287,131 @@ function fetchData() {
     }
   }
   
-  // シフト削除時の処理
-  function handleDeleteShift() {
-    if (!selectedCell) {
-      console.error('選択されたセルがありません');
-      return;
-    }
-    
-    // 現在のパターン情報を取得
-    const patternId = parseInt(selectedCell.getAttribute('data-pattern-id')) || 0;
-    if (patternId === 0) {
-      // 既に空の場合は何もしない
-      $('#patternSelectModal').modal('hide');
-      selectedCell = null;
-      return;
-    }
-    
-    // シフト情報を取得
-    const td = selectedCell.parentElement;
-    const employeeId = parseInt(td.getAttribute('data-employee-id'));
-    const date = td.getAttribute('data-date');
-    const shiftTime = td.getAttribute('data-shift-time');
-    const isRight = selectedCell.getAttribute('data-side') === 'right';
-    
-    console.log(`シフト削除リクエスト: 従業員ID=${employeeId}, 日付=${date}, 時間帯=${shiftTime}, 右側=${isRight}`);
-    
-    // セルの参照をローカル変数に保存（非同期処理内で安全に参照するため）
-    const cellToUpdate = selectedCell;
-    
-    // モーダルを閉じる - 先に閉じることでエラー回避
+  // シフト削除時の処理を修正
+function handleDeleteShift() {
+  if (!selectedCell) {
+    console.error('選択されたセルがありません');
+    return;
+  }
+  
+  // 現在のパターン情報を取得
+  const patternId = parseInt(selectedCell.getAttribute('data-pattern-id')) || 0;
+  if (patternId === 0) {
+    // 既に空の場合は何もしない
     $('#patternSelectModal').modal('hide');
-    
-    // selectedCell をリセット
     selectedCell = null;
+    return;
+  }
+  
+  // シフト情報を取得
+  const td = selectedCell.parentElement;
+  const employeeId = parseInt(td.getAttribute('data-employee-id'));
+  const date = td.getAttribute('data-date');
+  const shiftTime = td.getAttribute('data-shift-time');
+  const isRight = selectedCell.getAttribute('data-side') === 'right';
+  
+  console.log(`シフト削除リクエスト: 従業員ID=${employeeId}, 日付=${date}, 時間帯=${shiftTime}, 右側=${isRight}`);
+  
+  // セルの参照をローカル変数に保存（非同期処理内で安全に参照するため）
+  const cellToUpdate = selectedCell;
+  
+  // モーダルを閉じる - 先に閉じることでエラー回避
+  $('#patternSelectModal').modal('hide');
+  
+  // selectedCell をリセット
+  selectedCell = null;
+  
+  // シフトデータ用のキー
+  const key = `${employeeId}_${date}_${shiftTime}`;
+  
+  if (isRight) {
+    // 右側カレンダーの処理
     
-    // シフトデータ用のキー
-    const key = `${employeeId}_${date}_${shiftTime}`;
+    // まず、このシフトが左側カレンダーからも来ているかチェック
+    const existsInLeft = shiftsData[key] !== undefined;
     
-    // API エンドポイントを選択（右側と左側で異なるエンドポイントを使用）
-    const apiEndpoint = isRight ? '/api/deleteShiftSimulation' : '/api/deleteShift';
-    
-    // APIにデータを送信して削除
-    fetch(apiEndpoint, {
+    if (existsInLeft) {
+      // 左側カレンダーに存在する場合は、右側削除フラグをセットする
+      fetch('/api/markShiftAsRightDeleted', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          employee_id: employeeId,
+          date: date,
+          shift_time: shiftTime
+        })
+      })
+      .then(response => {
+        if (!response.ok) {
+          return response.text().then(text => {
+            throw new Error(`サーバーエラー (${response.status}): ${text}`);
+          });
+        }
+        return response.json();
+      })
+      .then(result => {
+        console.log('シフトに右側削除フラグを設定:', result);
+        
+        // 右側UIとメモリ上のデータを更新
+        if (cellToUpdate) {
+          cellToUpdate.textContent = '';
+          cellToUpdate.setAttribute('data-shift', '');
+          cellToUpdate.setAttribute('data-pattern-id', '0');
+          updateShiftCellStyle(cellToUpdate);
+        }
+        
+        // 右側データからは削除（表示しないように）
+        delete rightShiftsData[key];
+        
+        // 注意: shiftsDataは更新しない（左側カレンダーには表示したまま）
+      })
+      .catch(error => {
+        console.error('シフト右側削除フラグ設定エラー:', error);
+      });
+    } else {
+      // 右側カレンダーのみの追加データの場合は通常削除
+      fetch('/api/deleteShiftSimulation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          employee_id: employeeId,
+          date: date,
+          shift_time: shiftTime
+        })
+      })
+      .then(response => {
+        if (!response.ok) {
+          return response.text().then(text => {
+            throw new Error(`サーバーエラー (${response.status}): ${text}`);
+          });
+        }
+        return response.json();
+      })
+      .then(result => {
+        console.log('シミュレーションシフト削除成功:', result);
+        
+        // UI更新
+        if (cellToUpdate) {
+          cellToUpdate.textContent = '';
+          cellToUpdate.setAttribute('data-shift', '');
+          cellToUpdate.setAttribute('data-pattern-id', '0');
+          updateShiftCellStyle(cellToUpdate);
+        }
+        
+        // データ更新
+        delete rightShiftsData[key];
+      })
+      .catch(error => {
+        console.error('シミュレーションシフト削除エラー:', error);
+      });
+    }
+  } else {
+    // 左側カレンダーの削除処理（変更なし）
+    fetch('/api/deleteShift', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -344,7 +431,7 @@ function fetchData() {
       return response.json();
     })
     .then(result => {
-      console.log(`シフト削除成功 (${isRight ? '右側' : '左側'}):`, result);
+      console.log('シフト削除成功 (左側):', result);
       
       // 成功したら表示を更新
       if (cellToUpdate) {
@@ -355,14 +442,10 @@ function fetchData() {
       }
       
       // データを更新
-      if (isRight) {
-        delete rightShiftsData[key];
-      } else {
-        delete shiftsData[key];
-        
-        // 左側の削除を右側にも反映
-        updateRightCalendarCellDelete(employeeId, date, shiftTime);
-      }
+      delete shiftsData[key];
+      
+      // 左側の削除を右側にも反映
+      updateRightCalendarCellDelete(employeeId, date, shiftTime);
     })
     .catch(error => {
       console.error('シフト削除エラー:', error);
@@ -376,6 +459,7 @@ function fetchData() {
       }
     });
   }
+}
 
   // 左側の削除を右側に反映する関数
   function updateRightCalendarCellDelete(employeeId, date, shiftTime) {

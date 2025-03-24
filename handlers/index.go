@@ -263,12 +263,13 @@ func GetShiftsSimulationHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(resultShifts)
 }
 
-// 通常のシフトデータを取得
+// 通常のシフトデータを取得（右側カレンダー用に修正）
 func getRegularShiftsData(yearMonth string) ([]models.Shift, error) {
+	// 右側カレンダー用にはright_deleted=FALSEのものだけを取得
 	rows, err := db.DB.Query(`
-        SELECT s.id, s.staff_id, s.date, s.shift_time, s.kintai_pattern_id
+        SELECT s.id, s.staff_id, s.date, s.shift_time, s.kintai_pattern_id, s.right_deleted
         FROM shifts s
-        WHERE DATE_FORMAT(s.date, '%Y-%m') = ?
+        WHERE DATE_FORMAT(s.date, '%Y-%m') = ? AND s.right_deleted = FALSE
     `, yearMonth)
 	if err != nil {
 		log.Printf("Error querying shifts: %v", err)
@@ -280,7 +281,8 @@ func getRegularShiftsData(yearMonth string) ([]models.Shift, error) {
 	for rows.Next() {
 		var shift models.Shift
 		var staffID int
-		err := rows.Scan(&shift.ID, &staffID, &shift.Date, &shift.ShiftTime, &shift.KintaiPatternID)
+		var rightDeleted bool
+		err := rows.Scan(&shift.ID, &staffID, &shift.Date, &shift.ShiftTime, &shift.KintaiPatternID, &rightDeleted)
 		if err != nil {
 			log.Printf("Error scanning shift row: %v", err)
 			return nil, err
@@ -288,6 +290,7 @@ func getRegularShiftsData(yearMonth string) ([]models.Shift, error) {
 
 		// staff_id を employee_id にマッピング
 		shift.EmployeeID = staffID
+		shift.RightDeleted = rightDeleted
 		shifts = append(shifts, shift)
 	}
 
@@ -507,5 +510,71 @@ func DeleteShiftSimulationHandler(w http.ResponseWriter, r *http.Request) {
 		"success": true,
 		"id":      shiftID,
 		"message": "Simulation shift deleted successfully",
+	})
+}
+
+// MarkShiftAsRightDeletedHandler 新しいハンドラー追加
+func MarkShiftAsRightDeletedHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	log.Println("MarkShiftAsRightDeletedHandler called")
+
+	// リクエストボディからデータをデコード
+	var request struct {
+		EmployeeID int    `json:"employee_id"`
+		Date       string `json:"date"`
+		ShiftTime  string `json:"shift_time"`
+	}
+
+	err := json.NewDecoder(r.Body).Decode(&request)
+	if err != nil {
+		log.Printf("Error decoding request body: %v", err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	log.Printf("Marking shift as right_deleted: employee_id=%d, date=%s, shift_time=%s",
+		request.EmployeeID, request.Date, request.ShiftTime)
+
+	// employee_id を staff_id として使用
+	staffID := request.EmployeeID
+
+	// 対象のシフトを検索
+	var shiftID int
+	err = db.DB.QueryRow(`
+        SELECT id FROM shifts 
+        WHERE staff_id = ? AND date = ? AND shift_time = ?
+    `, staffID, request.Date, request.ShiftTime).Scan(&shiftID)
+
+	if err != nil {
+		log.Printf("Shift not found: %v", err)
+		// シフトが見つからない場合は正常に200 OKを返す
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": true,
+			"message": "Shift not found",
+		})
+		return
+	}
+
+	// シフトのright_deletedフラグをTrueに更新
+	_, err = db.DB.Exec("UPDATE shifts SET right_deleted = TRUE WHERE id = ?", shiftID)
+	if err != nil {
+		log.Printf("Error marking shift as right_deleted: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("Shift marked as right_deleted successfully: ID=%d", shiftID)
+
+	// 成功レスポンスを返す
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"id":      shiftID,
+		"message": "Shift marked as right_deleted successfully",
 	})
 }
