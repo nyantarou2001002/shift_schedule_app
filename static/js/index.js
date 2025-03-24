@@ -1,125 +1,273 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // 今日の日付を取得
-    const today = new Date();
-    let currentYear = today.getFullYear();
-    let currentMonth = today.getMonth() + 1; // JavaScriptの月は0から始まるので+1
-    
-    // 勤怠パターンとシフトデータを格納する変数
-    let kintaiPatterns = [];
-    let shiftsData = {};
-    
-    // 月選択の初期化
-    const monthSelector = document.getElementById('monthSelector');
-    const monthDisplay = document.getElementById('currentMonthDisplay');
-    
-    // YYYY-MM形式に変換
-    function formatYearMonth(year, month) {
-      return `${year}-${month.toString().padStart(2, '0')}`;
-    }
-    
-    // 表示用の形式に変換（YYYY年M月）
-    function formatDisplayMonth(year, month) {
-      return `${year}年${month}月`;
-    }
-    
-    // 初期設定
+  // 今日の日付を取得
+  const today = new Date();
+  let currentYear = today.getFullYear();
+  let currentMonth = today.getMonth() + 1; // JavaScriptの月は0から始まるので+1
+  
+  // モーダルの選択肢要素の参照を保持する変数
+  let selectedCell = null;
+  
+  // 勤怠パターンとシフトデータを格納する変数
+  let kintaiPatterns = [];
+  let shiftsData = {};
+  
+  // 月選択の初期化
+  const monthSelector = document.getElementById('monthSelector');
+  const monthDisplay = document.getElementById('currentMonthDisplay');
+  
+  // YYYY-MM形式に変換
+  function formatYearMonth(year, month) {
+    return `${year}-${month.toString().padStart(2, '0')}`;
+  }
+  
+  // 表示用の形式に変換（YYYY年M月）
+  function formatDisplayMonth(year, month) {
+    return `${year}年${month}月`;
+  }
+  
+  // 初期設定
+  if (monthSelector && monthDisplay) {
     monthSelector.value = formatYearMonth(currentYear, currentMonth);
     monthDisplay.textContent = formatDisplayMonth(currentYear, currentMonth);
-    
-    // データ取得関数
-    function fetchData() {
-      // 勤怠パターンを取得
-      fetch('/api/kintai_patterns')
-        .then(response => response.json())
-        .then(data => {
-          kintaiPatterns = data;
-          // 勤怠パターン取得後にシフトデータを取得
-          return fetch(`/api/shifts?yearMonth=${formatYearMonth(currentYear, currentMonth)}`);
-        })
-        .then(response => response.json())
-        .then(data => {
-          // シフトデータをキーで整理
-          shiftsData = {};
-          data.forEach(shift => {
-            const key = `${shift.employee_id}_${shift.date}_${shift.shift_time}`;
-            shiftsData[key] = shift;
+  }
+  
+  // データ取得関数
+  function fetchData() {
+    // 勤怠パターンを取得
+    fetch('/api/kintai_patterns')
+      .then(response => response.json())
+      .then(data => {
+        kintaiPatterns = data;
+        console.log('勤怠パターン取得成功:', kintaiPatterns);
+        
+        // 勤怠パターン選択モーダルの中身を生成
+        const patternListElement = document.getElementById('patternList');
+        if (patternListElement) {
+          patternListElement.innerHTML = '';
+          kintaiPatterns.forEach(pattern => {
+            const listItem = document.createElement('li');
+            listItem.className = 'list-group-item pattern-item';
+            listItem.dataset.patternId = pattern.id;
+            listItem.textContent = pattern.pattern_name;
+            listItem.addEventListener('click', function() {
+              handlePatternSelect(pattern.id);
+            });
+            patternListElement.appendChild(listItem);
           });
-          
-          // データ取得後にカレンダーを更新
-          updateCalendars();
-        })
-        .catch(error => console.error('データ取得エラー:', error));
-    }
-    
-    // 月セレクターの変更イベント
+        }
+        
+        // 勤怠パターン取得後にシフトデータを取得
+        return fetch(`/api/shifts?yearMonth=${formatYearMonth(currentYear, currentMonth)}`);
+      })
+      .then(response => response.json())
+      .then(data => {
+        // シフトデータをキーで整理
+        shiftsData = {};
+        data.forEach(shift => {
+          const key = `${shift.employee_id}_${shift.date}_${shift.shift_time}`;
+          shiftsData[key] = shift;
+        });
+        
+        // データ取得後にカレンダーを更新
+        updateCalendars();
+      })
+      .catch(error => console.error('データ取得エラー:', error));
+  }
+  
+  // 月セレクターの変更イベント
+  if (monthSelector) {
     monthSelector.addEventListener('change', function() {
       const selectedDate = monthSelector.value.split('-');
       currentYear = parseInt(selectedDate[0]);
       currentMonth = parseInt(selectedDate[1]);
       monthDisplay.textContent = formatDisplayMonth(currentYear, currentMonth);
-      fetchData(); // 新しい月のデータを取得
+      fetchData();
     });
-    
-    // 前月ボタン
-    document.getElementById('prevMonth').addEventListener('click', function() {
+  }
+  
+  // 前月ボタン
+  const prevMonthBtn = document.getElementById('prevMonth');
+  if (prevMonthBtn) {
+    prevMonthBtn.addEventListener('click', function() {
       currentMonth--;
       if (currentMonth < 1) {
         currentMonth = 12;
         currentYear--;
       }
-      monthSelector.value = formatYearMonth(currentYear, currentMonth);
-      monthDisplay.textContent = formatDisplayMonth(currentYear, currentMonth);
-      fetchData(); // 新しい月のデータを取得
+      if (monthSelector) {
+        monthSelector.value = formatYearMonth(currentYear, currentMonth);
+      }
+      if (monthDisplay) {
+        monthDisplay.textContent = formatDisplayMonth(currentYear, currentMonth);
+      }
+      fetchData();
     });
-    
-    // 次月ボタン
-    document.getElementById('nextMonth').addEventListener('click', function() {
+  }
+  
+  // 次月ボタン
+  const nextMonthBtn = document.getElementById('nextMonth');
+  if (nextMonthBtn) {
+    nextMonthBtn.addEventListener('click', function() {
       currentMonth++;
       if (currentMonth > 12) {
         currentMonth = 1;
         currentYear++;
       }
-      monthSelector.value = formatYearMonth(currentYear, currentMonth);
-      monthDisplay.textContent = formatDisplayMonth(currentYear, currentMonth);
-      fetchData(); // 新しい月のデータを取得
+      if (monthSelector) {
+        monthSelector.value = formatYearMonth(currentYear, currentMonth);
+      }
+      if (monthDisplay) {
+        monthDisplay.textContent = formatDisplayMonth(currentYear, currentMonth);
+      }
+      fetchData();
     });
-    
-    // 今月ボタン
-    document.getElementById('showCurrentMonth').addEventListener('click', function() {
+  }
+  
+  // 今月ボタン
+  const currentMonthBtn = document.getElementById('showCurrentMonth');
+  if (currentMonthBtn) {
+    currentMonthBtn.addEventListener('click', function() {
       currentYear = today.getFullYear();
       currentMonth = today.getMonth() + 1;
-      monthSelector.value = formatYearMonth(currentYear, currentMonth);
-      monthDisplay.textContent = formatDisplayMonth(currentYear, currentMonth);
-      fetchData(); // 新しい月のデータを取得
+      if (monthSelector) {
+        monthSelector.value = formatYearMonth(currentYear, currentMonth);
+      }
+      if (monthDisplay) {
+        monthDisplay.textContent = formatDisplayMonth(currentYear, currentMonth);
+      }
+      fetchData();
     });
+  }
+  
+  // 従業員を取得する関数
+  function fetchEmployees() {
+    return fetch('/api/employees')
+      .then(response => response.json())
+      .catch(error => {
+        console.error('従業員データ取得エラー:', error);
+        return [];
+      });
+  }
+  
+  // パターンIDから勤怠パターン名を取得する関数
+  function getPatternName(patternId) {
+    const pattern = kintaiPatterns.find(p => p.id === patternId);
+    return pattern ? pattern.pattern_name : '';
+  }
+  
+  // シフト情報を取得する関数
+  function getShiftInfo(employeeId, date, shiftTime) {
+    const key = `${employeeId}_${date}_${shiftTime}`;
+    return shiftsData[key] || null;
+  }
+  
+  // 勤怠パターン選択時の処理
+  function handlePatternSelect(patternId) {
+    if (!selectedCell) {
+      console.error('選択されたセルがありません');
+      return;
+    }
     
-    // 従業員を取得する関数
-    function fetchEmployees() {
-      return fetch('/api/employees')
-        .then(response => response.json())
-        .catch(error => {
-          console.error('従業員データ取得エラー:', error);
-          return []; // エラー時は空配列を返す
+    const pattern = kintaiPatterns.find(p => p.id === patternId);
+    if (!pattern) {
+      console.error(`ID ${patternId} のパターンが見つかりません`);
+      return;
+    }
+    
+    console.log(`選択されたパターン: ID=${patternId}, 名前=${pattern.pattern_name}`);
+    
+    // 選択したセルに勤怠パターンをセット
+    selectedCell.textContent = pattern.pattern_name;
+    selectedCell.setAttribute('data-shift', pattern.pattern_name);
+    selectedCell.setAttribute('data-pattern-id', pattern.id);
+    
+    // 見た目を更新
+    updateShiftCellStyle(selectedCell);
+    
+    // シフト情報をサーバーに送信
+    const td = selectedCell.parentElement;
+    const employeeId = parseInt(td.getAttribute('data-employee-id'));
+    const date = td.getAttribute('data-date');
+    const shiftTime = td.getAttribute('data-shift-time');
+    
+    console.log(`シフト更新リクエスト: 従業員ID=${employeeId}, 日付=${date}, 時間帯=${shiftTime}, パターンID=${pattern.id}`);
+    
+    // APIにデータを送信
+    fetch('/api/updateShift', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        employee_id: employeeId,
+        date: date,
+        shift_time: shiftTime,
+        kintai_pattern_id: pattern.id
+      })
+    })
+    .then(response => {
+      if (!response.ok) {
+        return response.text().then(text => {
+          throw new Error(`サーバーエラー (${response.status}): ${text}`);
         });
-    }
-    
-    // パターンIDから勤怠パターン名を取得する関数
-    function getPatternName(patternId) {
-      const pattern = kintaiPatterns.find(p => p.id === patternId);
-      return pattern ? pattern.pattern_name : '';
-    }
-    
-    // シフト情報を取得する関数
-    function getShiftInfo(employeeId, date, shiftTime) {
+      }
+      return response.json();
+    })
+    .then(updatedShift => {
+      console.log('シフト更新成功:', updatedShift);
+      // 成功したら shiftsData を更新
       const key = `${employeeId}_${date}_${shiftTime}`;
-      return shiftsData[key] || null;
-    }
+      shiftsData[key] = updatedShift;
+    })
+    .catch(error => console.error('シフト更新エラー:', error));
     
-    // 日付ごとに朝・昼・夜の3行に分けたシフト表を生成する関数
-    async function generateCalendar(year, month, containerId) {
-      const container = document.getElementById(containerId);
-      if (!container) return;
-      
+    // モーダルを閉じる
+    $('#patternSelectModal').modal('hide');
+    selectedCell = null;
+  }
+  
+  // シフトセルの見た目を更新する関数
+  function updateShiftCellStyle(cell) {
+    // 一旦すべてのクラスをリセット
+    cell.classList.remove('shift-early', 'shift-day', 'shift-late', 'shift-off', 'shift-vacation');
+    
+    // シフトパターンによってクラスを追加
+    const pattern = cell.getAttribute('data-shift');
+    switch (pattern) {
+      case 'Mそ':
+      case '早番':
+        cell.classList.add('shift-early');
+        break;
+      case 'D1':
+      case 'D2':
+      case '日勤':
+        cell.classList.add('shift-day');
+        break;
+      case 'SL':
+      case 'L1':
+      case 'L2':
+      case '遅番':
+        cell.classList.add('shift-late');
+        break;
+      case 'SD':
+      case '休み':
+        cell.classList.add('shift-off');
+        break;
+      case 'Dそ':
+      case '有給':
+        cell.classList.add('shift-vacation');
+        break;
+    }
+  }
+  
+  // 日付ごとに朝・昼・夜の3行に分けたシフト表を生成する関数
+  async function generateCalendar(year, month, containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    console.log(`カレンダー生成開始: ${containerId}, ${year}年${month}月`);
+    
+    try {
       // 従業員データを取得
       const employees = await fetchEmployees();
       
@@ -211,64 +359,54 @@ document.addEventListener('DOMContentLoaded', function() {
       
       calendarHTML += '</tbody></table>';
       
+      console.log(`カレンダーHTML生成完了: ${containerId}`);
+      
       // HTMLを挿入
       container.innerHTML = calendarHTML;
       
       // イベントリスナーの追加
       const shiftCells = container.querySelectorAll('.shift-cell');
+      console.log(`セル検出: ${shiftCells.length}個のセルを見つけました`);
+      
       shiftCells.forEach(cell => {
-        cell.addEventListener('click', function() {
+        // デバッグ用にスタイルを追加
+        cell.style.cursor = 'pointer';
+        
+        // シフトセルのクリックイベント
+        cell.addEventListener('click', function(event) {
+          // クリックされたセルの情報を取得
+          const td = this.parentElement;
+          const employeeId = td.getAttribute('data-employee-id');
+          const date = td.getAttribute('data-date');
+          const shiftTime = td.getAttribute('data-shift-time');
+          const patternName = this.getAttribute('data-shift');
+          
+          console.log('セルをクリックしました。', {
+            従業員ID: employeeId,
+            日付: date,
+            時間帯: shiftTime,
+            現在のパターン: patternName
+          });
+          
+          // 背景色を一時的に変更して視覚的フィードバックを提供
+          const originalBackgroundColor = this.style.backgroundColor;
+          this.style.backgroundColor = '#ffeb3b';  // 黄色でハイライト
+          
+          // 500ms後に元の色に戻す
+          setTimeout(() => {
+            this.style.backgroundColor = originalBackgroundColor;
+          }, 500);
+          
           if (kintaiPatterns.length === 0) {
             alert('勤怠パターンが取得できていません');
             return;
           }
           
-          // 現在のパターンIDを取得
-          const currentPatternId = parseInt(this.getAttribute('data-pattern-id')) || 0;
+          // クリックされたセルを記憶
+          selectedCell = this;
           
-          // 次のパターンIDを取得
-          let nextPatternIndex = 0;
-          if (currentPatternId > 0) {
-            const currentIndex = kintaiPatterns.findIndex(p => p.id === currentPatternId);
-            nextPatternIndex = (currentIndex + 1) % kintaiPatterns.length;
-          }
-          
-          // 次のパターンを設定
-          const nextPattern = kintaiPatterns[nextPatternIndex];
-          this.textContent = nextPattern.pattern_name;
-          this.setAttribute('data-shift', nextPattern.pattern_name);
-          this.setAttribute('data-pattern-id', nextPattern.id);
-          
-          // 見た目を変更
-          updateShiftCellStyle(this);
-          
-          // シフト情報をサーバーに送信
-          const td = this.parentElement;
-          const employeeId = parseInt(td.getAttribute('data-employee-id'));
-          const date = td.getAttribute('data-date');
-          const shiftTime = td.getAttribute('data-shift-time');
-          
-          // APIにデータを送信
-          fetch('/api/updateShift', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              employee_id: employeeId,
-              date: date,
-              shift_time: shiftTime,
-              kintai_pattern_id: nextPattern.id
-            })
-          })
-          .then(response => response.json())
-          .then(updatedShift => {
-            console.log('シフト更新成功:', updatedShift);
-            // 成功したら shiftsData を更新
-            const key = `${employeeId}_${date}_${shiftTime}`;
-            shiftsData[key] = updatedShift;
-          })
-          .catch(error => console.error('シフト更新エラー:', error));
+          // モーダルで勤怠パターン選択を表示
+          $('#patternSelectModal').modal('show');
         });
       });
       
@@ -276,59 +414,32 @@ document.addEventListener('DOMContentLoaded', function() {
       shiftCells.forEach(cell => {
         updateShiftCellStyle(cell);
       });
-    }
-    
-    // シフトセルの見た目を更新する関数
-    function updateShiftCellStyle(cell) {
-      // 一旦すべてのクラスをリセット
-      cell.classList.remove('shift-early', 'shift-day', 'shift-late', 'shift-off', 'shift-vacation');
       
-      // シフトパターンによってクラスを追加
-      const pattern = cell.getAttribute('data-shift');
-      switch (pattern) {
-        case '早番':
-          cell.classList.add('shift-early');
-          break;
-        case '日勤':
-          cell.classList.add('shift-day');
-          break;
-        case '遅番':
-          cell.classList.add('shift-late');
-          break;
-        case '休み':
-          cell.classList.add('shift-off');
-          break;
-        case '有給':
-          cell.classList.add('shift-vacation');
-          break;
-      }
+      console.log(`カレンダー生成完了: ${containerId}`);
+    } catch (error) {
+      console.error(`カレンダー生成エラー:`, error);
     }
+  }
+  
+  // 両方のカレンダーを更新する関数
+  function updateCalendars() {
+    console.log(`カレンダー更新: ${currentYear}年${currentMonth}月`);
+    generateCalendar(currentYear, currentMonth, 'leftCalendar')
+      .then(() => generateCalendar(currentYear, currentMonth, 'rightCalendar'));
+  }
+  
+  // 初期データ取得
+  fetchData();
+  
+  // jQuery と Bootstrap が読み込まれていることを確認
+  if (window.jQuery) {
+    console.log('jQuery が正常に読み込まれています');
     
-    // 両方のカレンダーを更新する関数
-    function updateCalendars() {
-        console.log(`カレンダー更新: ${currentYear}年${currentMonth}月`);
-        generateCalendar(currentYear, currentMonth, 'leftCalendar')
-        .then(() => generateCalendar(currentYear, currentMonth, 'rightCalendar'))
-        .then(() => {
-            // カレンダー生成後、必要に応じてスクロール位置をリセット
-            const containers = document.querySelectorAll('.calendar-container');
-            containers.forEach(container => {
-            container.scrollLeft = 0;
-            
-            // 今日の日付が表示されている場合、そこまでスクロール
-            const today = container.querySelector('.today');
-            if (today) {
-                const containerRect = container.getBoundingClientRect();
-                const todayRect = today.getBoundingClientRect();
-                const scrollTop = todayRect.top - containerRect.top - (containerRect.height / 2) + (todayRect.height / 2);
-                if (scrollTop > 0) {
-                container.scrollTop = scrollTop;
-                }
-            }
-            });
-        });
-    }
-    
-    // 初期データ取得
-    fetchData();
-  });
+    // モーダルが正しく初期化されていることを確認
+    $('#patternSelectModal').on('show.bs.modal', function() {
+      console.log('モーダル表示イベント');
+    });
+  } else {
+    console.error('jQuery が読み込まれていません！');
+  }
+});

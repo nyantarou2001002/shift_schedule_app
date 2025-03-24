@@ -134,10 +134,31 @@
       </div>
     </div>
   </div>
+
+   <!-- この部分を確認してください。モーダルが入っているか -->
+  <!-- 勤怠パターン選択用モーダル -->
+  <div class="modal fade" id="patternSelectModal" tabindex="-1" role="dialog" aria-labelledby="patternSelectModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-sm" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="patternSelectModalLabel">勤怠パターン選択</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="閉じる">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <ul class="list-group" id="patternList">
+            <!-- 勤怠パターンは動的に生成 -->
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
   
-  <!-- jQuery と Bootstrap の JS -->
-  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- jQuery と Bootstrap の JS、JQueryは完全版を使用 -->
+  <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.min.js"></script>
   
   <!-- 自作JavaScriptファイルの読み込み -->
   <script src="js/index.js"></script>

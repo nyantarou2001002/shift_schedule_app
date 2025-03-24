@@ -82,3 +82,62 @@
   .horizontal-calendar tr {
     height: 38px;
   }
+
+/* 勤怠パターン選択用のスタイル追加 */
+.pattern-item {
+  cursor: pointer;
+  padding: 10px 15px;
+  transition: background-color 0.2s;
+}
+
+.pattern-item:hover {
+  background-color: #f0f0f0;
+  font-weight: bold;
+}
+
+/* クリック時のスタイル */
+.pattern-item:active {
+  background-color: #e9e9e9;
+}
+
+/* シフトセルのスタイル */
+.shift-cell {
+  cursor: pointer;
+  transition: background-color 0.2s;
+  padding: 5px;
+  border-radius: 3px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.shift-cell:hover {
+  background-color: #f0f0f0;
+}
+
+/* 各勤怠パターンの色分け */
+.shift-early {
+  color: #28a745;
+  font-weight: bold;
+}
+
+.shift-day {
+  color: #0066cc;
+  font-weight: bold;
+}
+
+.shift-late {
+  color: #007bff;
+  font-weight: bold;
+}
+
+.shift-off {
+  color: #dc3545;
+  font-weight: bold;
+}
+
+.shift-vacation {
+  color: #fd7e14;
+  font-weight: bold;
+}

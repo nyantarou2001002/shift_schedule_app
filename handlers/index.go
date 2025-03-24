@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"shift_schedule_app/db"
 	"shift_schedule_app/models"
@@ -15,6 +16,8 @@ func GetShiftsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Println("GetShiftsHandler called")
+
 	// URLクエリから年月を取得
 	yearMonth := r.URL.Query().Get("yearMonth")
 	if yearMonth == "" {
@@ -23,6 +26,8 @@ func GetShiftsHandler(w http.ResponseWriter, r *http.Request) {
 		yearMonth = now.Format("2006-01")
 	}
 
+	log.Printf("Fetching shifts for year-month: %s", yearMonth)
+
 	// データベースからシフト情報を取得
 	rows, err := db.DB.Query(`
         SELECT s.id, s.staff_id, s.date, s.shift_time, s.kintai_pattern_id
@@ -30,6 +35,7 @@ func GetShiftsHandler(w http.ResponseWriter, r *http.Request) {
         WHERE DATE_FORMAT(s.date, '%Y-%m') = ?
     `, yearMonth)
 	if err != nil {
+		log.Printf("Error querying shifts: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -38,13 +44,20 @@ func GetShiftsHandler(w http.ResponseWriter, r *http.Request) {
 	shifts := []models.Shift{}
 	for rows.Next() {
 		var shift models.Shift
-		err := rows.Scan(&shift.ID, &shift.EmployeeID, &shift.Date, &shift.ShiftTime, &shift.KintaiPatternID)
+		var staffID int
+		err := rows.Scan(&shift.ID, &staffID, &shift.Date, &shift.ShiftTime, &shift.KintaiPatternID)
 		if err != nil {
+			log.Printf("Error scanning shift row: %v", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+
+		// staff_id を employee_id にマッピング
+		shift.EmployeeID = staffID
 		shifts = append(shifts, shift)
 	}
+
+	log.Printf("Found %d shifts for %s", len(shifts), yearMonth)
 
 	// JSONとして返す
 	w.Header().Set("Content-Type", "application/json")
@@ -58,11 +71,36 @@ func UpdateShiftHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Println("UpdateShiftHandler called")
+
 	// リクエストボディからデータをデコード
 	var shift models.Shift
 	err := json.NewDecoder(r.Body).Decode(&shift)
 	if err != nil {
+		log.Printf("Error decoding request body: %v", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	log.Printf("Updating shift: employee_id=%d, date=%s, shift_time=%s, kintai_pattern_id=%d",
+		shift.EmployeeID, shift.Date, shift.ShiftTime, shift.KintaiPatternID)
+
+	// 重要: employee_id を staff_id として使用
+	staffID := shift.EmployeeID
+
+	// まず、従業員IDがstaffテーブルに存在するか確認
+	var exists bool
+	err = db.DB.QueryRow("SELECT EXISTS(SELECT 1 FROM staff WHERE id = ?)", staffID).Scan(&exists)
+	if err != nil {
+		log.Printf("Error checking staff existence: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if !exists {
+		// スタッフが存在しない場合はエラー
+		log.Printf("Staff with ID %d does not exist", staffID)
+		http.Error(w, "Staff does not exist", http.StatusBadRequest)
 		return
 	}
 
@@ -71,27 +109,31 @@ func UpdateShiftHandler(w http.ResponseWriter, r *http.Request) {
 	err = db.DB.QueryRow(`
         SELECT id FROM shifts 
         WHERE staff_id = ? AND date = ? AND shift_time = ?
-    `, shift.EmployeeID, shift.Date, shift.ShiftTime).Scan(&existingID)
+    `, staffID, shift.Date, shift.ShiftTime).Scan(&existingID)
 
 	var result models.Shift
 	if err == nil {
+		log.Printf("Updating existing shift with ID %d", existingID)
 		// 既存のシフトがある場合は更新
 		_, err = db.DB.Exec(`
             UPDATE shifts SET kintai_pattern_id = ?
             WHERE id = ?
         `, shift.KintaiPatternID, existingID)
 		if err != nil {
+			log.Printf("Error updating shift: %v", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 		result.ID = existingID
 	} else {
+		log.Printf("Creating new shift for staff_id=%d", staffID)
 		// 既存のシフトがない場合は新規作成
 		res, err := db.DB.Exec(`
             INSERT INTO shifts (staff_id, date, shift_time, kintai_pattern_id)
             VALUES (?, ?, ?, ?)
-        `, shift.EmployeeID, shift.Date, shift.ShiftTime, shift.KintaiPatternID)
+        `, staffID, shift.Date, shift.ShiftTime, shift.KintaiPatternID)
 		if err != nil {
+			log.Printf("Error creating new shift: %v", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -100,10 +142,12 @@ func UpdateShiftHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 結果を返す
-	result.EmployeeID = shift.EmployeeID
+	result.EmployeeID = staffID
 	result.Date = shift.Date
 	result.ShiftTime = shift.ShiftTime
 	result.KintaiPatternID = shift.KintaiPatternID
+
+	log.Printf("Shift updated successfully with ID %d", result.ID)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(result)
