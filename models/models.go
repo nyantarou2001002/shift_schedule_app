@@ -21,4 +21,14 @@ type Shift struct {
 	Date            string `json:"date"`
 	ShiftTime       string `json:"shift_time"`
 	KintaiPatternID int    `json:"kintai_pattern_id"`
+	RightDeleted    bool   `json:"right_deleted"` // 右側カレンダーで削除されたかどうか
+}
+
+// ShiftSimulation はシミュレーション用のシフト情報の構造体です
+type ShiftSimulation struct {
+	ID              int    `json:"id"`
+	EmployeeID      int    `json:"employee_id"`
+	Date            string `json:"date"`
+	ShiftTime       string `json:"shift_time"`
+	KintaiPatternID int    `json:"kintai_pattern_id"`
 }

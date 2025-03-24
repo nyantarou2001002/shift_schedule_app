@@ -9,7 +9,8 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // 勤怠パターンとシフトデータを格納する変数
   let kintaiPatterns = [];
-  let shiftsData = {};
+  let shiftsData = {}; // 左側カレンダー用
+  let rightShiftsData = {}; // 右側カレンダー用（独立したデータ）
   
   // 月選択の初期化
   const monthSelector = document.getElementById('monthSelector');
@@ -31,48 +32,65 @@ document.addEventListener('DOMContentLoaded', function() {
     monthDisplay.textContent = formatDisplayMonth(currentYear, currentMonth);
   }
   
-  // データ取得関数
-  function fetchData() {
-    // 勤怠パターンを取得
-    fetch('/api/kintai_patterns')
-      .then(response => response.json())
-      .then(data => {
-        kintaiPatterns = data;
-        console.log('勤怠パターン取得成功:', kintaiPatterns);
-        
-        // 勤怠パターン選択モーダルの中身を生成
-        const patternListElement = document.getElementById('patternList');
-        if (patternListElement) {
-          patternListElement.innerHTML = '';
-          kintaiPatterns.forEach(pattern => {
-            const listItem = document.createElement('li');
-            listItem.className = 'list-group-item pattern-item';
-            listItem.dataset.patternId = pattern.id;
-            listItem.textContent = pattern.pattern_name;
-            listItem.addEventListener('click', function() {
-              handlePatternSelect(pattern.id);
-            });
-            patternListElement.appendChild(listItem);
+  // データ取得関数も修正
+function fetchData() {
+  // 勤怠パターンを取得
+  fetch('/api/kintai_patterns')
+    .then(response => response.json())
+    .then(data => {
+      kintaiPatterns = data;
+      console.log('勤怠パターン取得成功:', kintaiPatterns);
+      
+      // 勤怠パターン選択モーダルの中身を生成
+      const patternListElement = document.getElementById('patternList');
+      if (patternListElement) {
+        patternListElement.innerHTML = '';
+        kintaiPatterns.forEach(pattern => {
+          const listItem = document.createElement('li');
+          listItem.className = 'list-group-item pattern-item';
+          listItem.dataset.patternId = pattern.id;
+          listItem.textContent = pattern.pattern_name;
+          listItem.addEventListener('click', function() {
+            handlePatternSelect(pattern.id);
           });
-        }
-        
-        // 勤怠パターン取得後にシフトデータを取得
-        return fetch(`/api/shifts?yearMonth=${formatYearMonth(currentYear, currentMonth)}`);
-      })
-      .then(response => response.json())
-      .then(data => {
-        // シフトデータをキーで整理
-        shiftsData = {};
-        data.forEach(shift => {
-          const key = `${shift.employee_id}_${shift.date}_${shift.shift_time}`;
-          shiftsData[key] = shift;
+          patternListElement.appendChild(listItem);
         });
-        
-        // データ取得後にカレンダーを更新
-        updateCalendars();
-      })
-      .catch(error => console.error('データ取得エラー:', error));
-  }
+      }
+      
+      // 左側（通常）シフトデータを取得
+      return fetch(`/api/shifts?yearMonth=${formatYearMonth(currentYear, currentMonth)}`);
+    })
+    .then(response => response.json())
+    .then(data => {
+      // 左側シフトデータをキーで整理
+      shiftsData = {};
+      data.forEach(shift => {
+        const key = `${shift.employee_id}_${shift.date}_${shift.shift_time}`;
+        shiftsData[key] = shift;
+      });
+      
+      // 右側（シミュレーション）シフトデータを取得
+      return fetch(`/api/shifts_simulation?yearMonth=${formatYearMonth(currentYear, currentMonth)}`);
+    })
+    .then(response => response.json())
+    .then(data => {
+      // 右側シフトデータをキーで整理
+      rightShiftsData = {};
+      data.forEach(shift => {
+        const key = `${shift.employee_id}_${shift.date}_${shift.shift_time}`;
+        rightShiftsData[key] = shift;
+      });
+      
+      console.log('両カレンダーのシフトデータ取得完了:', {
+        左側: Object.keys(shiftsData).length,
+        右側: Object.keys(rightShiftsData).length
+      });
+      
+      // データ取得後にカレンダーを更新
+      updateCalendars();
+    })
+    .catch(error => console.error('データ取得エラー:', error));
+}
   
   // 月セレクターの変更イベント
   if (monthSelector) {
@@ -155,10 +173,10 @@ document.addEventListener('DOMContentLoaded', function() {
     return pattern ? pattern.pattern_name : '';
   }
   
-  // シフト情報を取得する関数
-  function getShiftInfo(employeeId, date, shiftTime) {
+  // シフト情報を取得する関数（カレンダー側によって異なるデータソースを使用）
+  function getShiftInfo(employeeId, date, shiftTime, isRight = false) {
     const key = `${employeeId}_${date}_${shiftTime}`;
-    return shiftsData[key] || null;
+    return isRight ? rightShiftsData[key] || null : shiftsData[key] || null;
   }
   
   // 勤怠パターン選択時の処理
@@ -184,16 +202,23 @@ document.addEventListener('DOMContentLoaded', function() {
     // 見た目を更新
     updateShiftCellStyle(selectedCell);
     
-    // シフト情報をサーバーに送信
+    // シフト情報を取得
     const td = selectedCell.parentElement;
     const employeeId = parseInt(td.getAttribute('data-employee-id'));
     const date = td.getAttribute('data-date');
     const shiftTime = td.getAttribute('data-shift-time');
+    const isRight = selectedCell.getAttribute('data-side') === 'right';
     
-    console.log(`シフト更新リクエスト: 従業員ID=${employeeId}, 日付=${date}, 時間帯=${shiftTime}, パターンID=${pattern.id}`);
+    console.log(`シフト更新リクエスト: 従業員ID=${employeeId}, 日付=${date}, 時間帯=${shiftTime}, パターンID=${pattern.id}, 右側=${isRight}`);
     
-    // APIにデータを送信
-    fetch('/api/updateShift', {
+    // 対象のデータを更新
+    const key = `${employeeId}_${date}_${shiftTime}`;
+    
+    // API エンドポイントを選択（右側と左側で異なるエンドポイントを使用）
+    const apiEndpoint = isRight ? '/api/updateShiftSimulation' : '/api/updateShift';
+    
+    // APIにデータを送信（右側と左側の両方）
+    fetch(apiEndpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -214,100 +239,163 @@ document.addEventListener('DOMContentLoaded', function() {
       return response.json();
     })
     .then(updatedShift => {
-      console.log('シフト更新成功:', updatedShift);
-      // 成功したら shiftsData を更新
-      const key = `${employeeId}_${date}_${shiftTime}`;
+      console.log(`シフト更新成功 (${isRight ? '右側' : '左側'})`, updatedShift);
+      // 成功したらデータを更新
+    if (isRight) {
+      rightShiftsData[key] = updatedShift;
+    } else {
       shiftsData[key] = updatedShift;
-    })
-    .catch(error => console.error('シフト更新エラー:', error));
-    
-    // モーダルを閉じる
-    $('#patternSelectModal').modal('hide');
-    selectedCell = null;
-  }
+      
+      // 左側の変更を右側にも反映する
+      updateRightCalendarCell(employeeId, date, shiftTime, pattern.id, pattern.pattern_name);
+    }
+  })
+  .catch(error => console.error('シフト更新エラー:', error));
   
-  // シフト削除時の処理を修正
-function handleDeleteShift() {
-  if (!selectedCell) {
-    console.error('選択されたセルがありません');
-    return;
-  }
-  
-  // 現在のパターン情報を取得
-  const patternId = parseInt(selectedCell.getAttribute('data-pattern-id')) || 0;
-  if (patternId === 0) {
-    // 既に空の場合は何もしない
-    $('#patternSelectModal').modal('hide');
-    selectedCell = null;
-    return;
-  }
-  
-  // シフト情報を取得
-  const td = selectedCell.parentElement;
-  const employeeId = parseInt(td.getAttribute('data-employee-id'));
-  const date = td.getAttribute('data-date');
-  const shiftTime = td.getAttribute('data-shift-time');
-  
-  console.log(`シフト削除リクエスト: 従業員ID=${employeeId}, 日付=${date}, 時間帯=${shiftTime}`);
-  
-  // セルの参照をローカル変数に保存（非同期処理内で安全に参照するため）
-  const cellToUpdate = selectedCell;
-  
-  // モーダルを閉じる - 先に閉じることでエラー回避
+  // モーダルを閉じる
   $('#patternSelectModal').modal('hide');
-  
-  // selectedCell をリセット
   selectedCell = null;
+}
   
-  // APIにデータを送信して削除
-  fetch('/api/deleteShift', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
+  
+  // 左側の変更を右側に反映する関数
+  function updateRightCalendarCell(employeeId, date, shiftTime, patternId, patternName) {
+    const key = `${employeeId}_${date}_${shiftTime}`;
+    rightShiftsData[key] = {
+      id: -1,
       employee_id: employeeId,
       date: date,
-      shift_time: shiftTime
-    })
-  })
-  .then(response => {
-    if (!response.ok) {
-      return response.text().then(text => {
-        throw new Error(`サーバーエラー (${response.status}): ${text}`);
-      });
-    }
-    return response.json();
-  })
-  .then(result => {
-    console.log('シフト削除成功:', result);
+      shift_time: shiftTime,
+      kintai_pattern_id: patternId
+    };
     
-    // 成功したら表示を更新（ローカル変数を使用）
-    if (cellToUpdate) {
-      cellToUpdate.textContent = '';
-      cellToUpdate.setAttribute('data-shift', '');
-      cellToUpdate.setAttribute('data-pattern-id', '0');
-      updateShiftCellStyle(cellToUpdate);
+    // 既に表示されている右側カレンダーがあれば更新
+    const rightCalendar = document.getElementById('rightCalendar');
+    if (!rightCalendar) return;
+    
+    const cellSelector = `.shift-cell[data-side="right"][data-employee="${employeeId}"][data-date="${date}"][data-shift-time="${shiftTime}"]`;
+    const cell = rightCalendar.querySelector(cellSelector);
+    if (cell) {
+      cell.textContent = patternName;
+      cell.setAttribute('data-shift', patternName);
+      cell.setAttribute('data-pattern-id', patternId);
+      updateShiftCellStyle(cell);
+    }
+  }
+  
+  // シフト削除時の処理
+  function handleDeleteShift() {
+    if (!selectedCell) {
+      console.error('選択されたセルがありません');
+      return;
     }
     
-    // シフトデータも更新
+    // 現在のパターン情報を取得
+    const patternId = parseInt(selectedCell.getAttribute('data-pattern-id')) || 0;
+    if (patternId === 0) {
+      // 既に空の場合は何もしない
+      $('#patternSelectModal').modal('hide');
+      selectedCell = null;
+      return;
+    }
+    
+    // シフト情報を取得
+    const td = selectedCell.parentElement;
+    const employeeId = parseInt(td.getAttribute('data-employee-id'));
+    const date = td.getAttribute('data-date');
+    const shiftTime = td.getAttribute('data-shift-time');
+    const isRight = selectedCell.getAttribute('data-side') === 'right';
+    
+    console.log(`シフト削除リクエスト: 従業員ID=${employeeId}, 日付=${date}, 時間帯=${shiftTime}, 右側=${isRight}`);
+    
+    // セルの参照をローカル変数に保存（非同期処理内で安全に参照するため）
+    const cellToUpdate = selectedCell;
+    
+    // モーダルを閉じる - 先に閉じることでエラー回避
+    $('#patternSelectModal').modal('hide');
+    
+    // selectedCell をリセット
+    selectedCell = null;
+    
+    // シフトデータ用のキー
     const key = `${employeeId}_${date}_${shiftTime}`;
-    delete shiftsData[key];
-  })
-  .catch(error => {
-    console.error('シフト削除エラー:', error);
     
-    // エラーが発生しても表示だけ更新（ローカル変数を使用）
-    if (cellToUpdate) {
-      cellToUpdate.textContent = '';
-      cellToUpdate.setAttribute('data-shift', '');
-      cellToUpdate.setAttribute('data-pattern-id', '0');
-      updateShiftCellStyle(cellToUpdate);
+    // API エンドポイントを選択（右側と左側で異なるエンドポイントを使用）
+    const apiEndpoint = isRight ? '/api/deleteShiftSimulation' : '/api/deleteShift';
+    
+    // APIにデータを送信して削除
+    fetch(apiEndpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        employee_id: employeeId,
+        date: date,
+        shift_time: shiftTime
+      })
+    })
+    .then(response => {
+      if (!response.ok) {
+        return response.text().then(text => {
+          throw new Error(`サーバーエラー (${response.status}): ${text}`);
+        });
+      }
+      return response.json();
+    })
+    .then(result => {
+      console.log(`シフト削除成功 (${isRight ? '右側' : '左側'}):`, result);
+      
+      // 成功したら表示を更新
+      if (cellToUpdate) {
+        cellToUpdate.textContent = '';
+        cellToUpdate.setAttribute('data-shift', '');
+        cellToUpdate.setAttribute('data-pattern-id', '0');
+        updateShiftCellStyle(cellToUpdate);
+      }
+      
+      // データを更新
+      if (isRight) {
+        delete rightShiftsData[key];
+      } else {
+        delete shiftsData[key];
+        
+        // 左側の削除を右側にも反映
+        updateRightCalendarCellDelete(employeeId, date, shiftTime);
+      }
+    })
+    .catch(error => {
+      console.error('シフト削除エラー:', error);
+      
+      // エラーが発生しても表示だけ更新
+      if (cellToUpdate) {
+        cellToUpdate.textContent = '';
+        cellToUpdate.setAttribute('data-shift', '');
+        cellToUpdate.setAttribute('data-pattern-id', '0');
+        updateShiftCellStyle(cellToUpdate);
+      }
+    });
+  }
+
+  // 左側の削除を右側に反映する関数
+  function updateRightCalendarCellDelete(employeeId, date, shiftTime) {
+    const key = `${employeeId}_${date}_${shiftTime}`;
+    delete rightShiftsData[key];
+    
+    // 既に表示されている右側カレンダーがあれば更新
+    const rightCalendar = document.getElementById('rightCalendar');
+    if (!rightCalendar) return;
+    
+    const cellSelector = `.shift-cell[data-side="right"][data-employee="${employeeId}"][data-date="${date}"][data-shift-time="${shiftTime}"]`;
+    const cell = rightCalendar.querySelector(cellSelector);
+    if (cell) {
+      cell.textContent = '';
+      cell.setAttribute('data-shift', '');
+      cell.setAttribute('data-pattern-id', '0');
+      updateShiftCellStyle(cell);
     }
-  });
-}
-
-
+  }
+  
   // シフトセルの見た目を更新する関数
   function updateShiftCellStyle(cell) {
     // 一旦すべてのクラスをリセット
@@ -347,7 +435,8 @@ function handleDeleteShift() {
     const container = document.getElementById(containerId);
     if (!container) return;
     
-    console.log(`カレンダー生成開始: ${containerId}, ${year}年${month}月`);
+    const isRight = containerId === 'rightCalendar';
+    console.log(`カレンダー生成開始: ${containerId}, ${year}年${month}月, 右側=${isRight}`);
     
     try {
       // 従業員データを取得
@@ -396,12 +485,12 @@ function handleDeleteShift() {
         
         // 各従業員のシフトセル（朝）
         employees.forEach(employee => {
-          const shiftInfo = getShiftInfo(employee.id, dateStr, 'morning');
+          const shiftInfo = getShiftInfo(employee.id, dateStr, 'morning', isRight);
           const patternId = shiftInfo ? shiftInfo.kintai_pattern_id : 0;
           const patternName = getPatternName(patternId);
           
           calendarHTML += `<td data-employee-id="${employee.id}" data-date="${dateStr}" data-shift-time="morning">
-            <div class="shift-cell" data-shift="${patternName}" data-pattern-id="${patternId}">${patternName}</div>
+            <div class="shift-cell" data-shift="${patternName}" data-pattern-id="${patternId}" data-side="${isRight ? 'right' : 'left'}" data-employee="${employee.id}" data-date="${dateStr}" data-shift-time="morning">${patternName}</div>
           </td>`;
         });
         calendarHTML += '</tr>';
@@ -412,12 +501,12 @@ function handleDeleteShift() {
         
         // 各従業員のシフトセル（昼）
         employees.forEach(employee => {
-          const shiftInfo = getShiftInfo(employee.id, dateStr, 'day');
+          const shiftInfo = getShiftInfo(employee.id, dateStr, 'day', isRight);
           const patternId = shiftInfo ? shiftInfo.kintai_pattern_id : 0;
           const patternName = getPatternName(patternId);
           
           calendarHTML += `<td data-employee-id="${employee.id}" data-date="${dateStr}" data-shift-time="day">
-            <div class="shift-cell" data-shift="${patternName}" data-pattern-id="${patternId}">${patternName}</div>
+            <div class="shift-cell" data-shift="${patternName}" data-pattern-id="${patternId}" data-side="${isRight ? 'right' : 'left'}" data-employee="${employee.id}" data-date="${dateStr}" data-shift-time="day">${patternName}</div>
           </td>`;
         });
         calendarHTML += '</tr>';
@@ -428,12 +517,12 @@ function handleDeleteShift() {
         
         // 各従業員のシフトセル（夜）
         employees.forEach(employee => {
-          const shiftInfo = getShiftInfo(employee.id, dateStr, 'night');
+          const shiftInfo = getShiftInfo(employee.id, dateStr, 'night', isRight);
           const patternId = shiftInfo ? shiftInfo.kintai_pattern_id : 0;
           const patternName = getPatternName(patternId);
           
           calendarHTML += `<td data-employee-id="${employee.id}" data-date="${dateStr}" data-shift-time="night">
-            <div class="shift-cell" data-shift="${patternName}" data-pattern-id="${patternId}">${patternName}</div>
+            <div class="shift-cell" data-shift="${patternName}" data-pattern-id="${patternId}" data-side="${isRight ? 'right' : 'left'}" data-employee="${employee.id}" data-date="${dateStr}" data-shift-time="night">${patternName}</div>
           </td>`;
         });
         calendarHTML += '</tr>';
@@ -463,13 +552,15 @@ function handleDeleteShift() {
           const shiftTime = td.getAttribute('data-shift-time');
           const patternName = this.getAttribute('data-shift');
           const patternId = parseInt(this.getAttribute('data-pattern-id')) || 0;
+          const side = this.getAttribute('data-side');
           
           console.log('セルをクリックしました。', {
             従業員ID: employeeId,
             日付: date,
             時間帯: shiftTime,
             現在のパターン: patternName,
-            パターンID: patternId
+            パターンID: patternId,
+            カレンダー: side
           });
           
           // 背景色を一時的に変更して視覚的フィードバックを提供

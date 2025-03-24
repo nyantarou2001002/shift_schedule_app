@@ -28,6 +28,11 @@ func main() {
 	http.HandleFunc("/api/updateShift", handlers.UpdateShiftHandler)
 	http.HandleFunc("/api/deleteShift", handlers.DeleteShiftHandler)
 
+	// シミュレーション用シフト関連のエンドポイント
+	http.HandleFunc("/api/shifts_simulation", handlers.GetShiftsSimulationHandler)
+	http.HandleFunc("/api/updateShiftSimulation", handlers.UpdateShiftSimulationHandler)
+	http.HandleFunc("/api/deleteShiftSimulation", handlers.DeleteShiftSimulationHandler)
+
 	// 静的ファイルサーバー
 	http.Handle("/", http.FileServer(http.Dir("./static")))
 
