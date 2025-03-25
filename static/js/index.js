@@ -574,196 +574,227 @@ function getHolidayName(dateStr) {
     }
   }
   
-  // 日付ごとに朝・昼・夜の3行に分けたシフト表を生成する関数
-  async function generateCalendar(year, month, containerId) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
+ // 日付ごとに朝・昼・夜の3行に分けたシフト表を生成する関数を修正
+async function generateCalendar(year, month, containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  
+  const isRight = containerId === 'rightCalendar';
+  console.log(`カレンダー生成開始: ${containerId}, ${year}年${month}月, 右側=${isRight}`);
+  
+  try {
+    // 従業員データを取得
+    const employees = await fetchEmployees();
     
-    const isRight = containerId === 'rightCalendar';
-    console.log(`カレンダー生成開始: ${containerId}, ${year}年${month}月, 右側=${isRight}`);
+    // 月の最初の日と最後の日を取得
+    const firstDay = new Date(year, month - 1, 1);
+    const lastDay = new Date(year, month, 0);
+    const daysInMonth = lastDay.getDate();
     
-    try {
-      // 従業員データを取得
-      const employees = await fetchEmployees();
+    // 曜日の名前配列
+    const weekDays = ['日', '月', '火', '水', '木', '金', '土'];
+    
+    // HTML生成開始
+    let calendarHTML = '<table class="table table-bordered horizontal-calendar">';
+    
+    // ヘッダー行（日付の列とその右に従業員名）
+  calendarHTML += '<thead><tr><th rowspan="2">日付</th><th rowspan="2">時間帯</th>';
+  
+  // 従業員名のヘッダー
+  employees.forEach(employee => {
+    calendarHTML += `<th class="employee-header">${employee.name}</th>`;
+  });
+  
+  // 右端に日付と時間帯のヘッダーを追加（順序入れ替え）
+  calendarHTML += '<th rowspan="2">日付</th><th rowspan="2">時間帯</th></tr>';
+  
+  calendarHTML += '</thead>';
+  
+  // カレンダー本体
+  calendarHTML += '<tbody>';
+    
+    for (let i = 1; i <= daysInMonth; i++) {
+      const date = new Date(year, month - 1, i);
+      const dayOfWeek = date.getDay();
+      const dateStr = `${year}-${month.toString().padStart(2, '0')}-${i.toString().padStart(2, '0')}`;
       
-      // 月の最初の日と最後の日を取得
-      const firstDay = new Date(year, month - 1, 1);
-      const lastDay = new Date(year, month, 0);
-      const daysInMonth = lastDay.getDate();
+      // 祝日判定
+      const isHolidayDate = isHoliday(dateStr);
+      const holidayName = getHolidayName(dateStr);
       
-      // 曜日の名前配列
-      const weekDays = ['日', '月', '火', '水', '木', '金', '土'];
-      
-      // HTML生成開始
-      let calendarHTML = '<table class="table table-bordered horizontal-calendar">';
-      
-      // ヘッダー行（日付の列とその右に従業員名）
-      calendarHTML += '<thead><tr><th rowspan="2">日付</th><th rowspan="2">時間帯</th>';
-      employees.forEach(employee => {
-        calendarHTML += `<th class="employee-header">${employee.name}</th>`;
-      });
-      calendarHTML += '</tr>';
-      calendarHTML += '</thead>';
-      
-      // カレンダー本体
-      calendarHTML += '<tbody>';
-      
-      for (let i = 1; i <= daysInMonth; i++) {
-    const date = new Date(year, month - 1, i);
-    const dayOfWeek = date.getDay();
-    const dateStr = `${year}-${month.toString().padStart(2, '0')}-${i.toString().padStart(2, '0')}`;
-    
-    // 祝日判定
-    const isHolidayDate = isHoliday(dateStr);
-    const holidayName = getHolidayName(dateStr);
-    
-    // 日付のクラスを設定（日曜または祝日なら赤色になるようにクラスを指定）
-    let dayClass = '';
-    if (dayOfWeek === 0) {
-      dayClass = 'sun';
-    } else if (dayOfWeek === 6) {
-      dayClass = 'sat';
-    }
-    
-    // 祝日の場合はholidayクラスを追加
-    if (isHolidayDate) {
-      dayClass += ' holiday';
-    }
-    
-    // 今日の日付には特別なクラスを適用
-    const isToday = i === today.getDate() && month === today.getMonth() + 1 && year === today.getFullYear();
-    const todayClass = isToday ? 'today' : '';
-    
-    // 朝の行
-    calendarHTML += `<tr class="${dayClass} ${todayClass} time-morning">
-      <td class="date-cell" rowspan="3" ${(dayOfWeek === 0 || isHolidayDate) ? 'style="color: #dc3545; font-weight: bold;"' : ''}>
-        ${i}（${weekDays[dayOfWeek]}）
-        ${isHolidayDate ? `<br><span class="holiday-name">${holidayName}</span>` : ''}
-      </td>
-      <td class="shift-time-label">朝</td>`;
-        // 各従業員のシフトセル（朝）
-        employees.forEach(employee => {
-          const shiftInfo = getShiftInfo(employee.id, dateStr, 'morning', isRight);
-          const patternId = shiftInfo ? shiftInfo.kintai_pattern_id : 0;
-          const patternName = getPatternName(patternId);
-          
-          calendarHTML += `<td data-employee-id="${employee.id}" data-date="${dateStr}" data-shift-time="morning">
-            <div class="shift-cell" data-shift="${patternName}" data-pattern-id="${patternId}" data-side="${isRight ? 'right' : 'left'}" data-employee="${employee.id}" data-date="${dateStr}" data-shift-time="morning">${patternName}</div>
-          </td>`;
-        });
-        calendarHTML += '</tr>';
-        
-        // 昼の行
-        calendarHTML += `<tr class="${dayClass} ${todayClass} time-day">
-          <td class="shift-time-label">昼</td>`;
-        
-        // 各従業員のシフトセル（昼）
-        employees.forEach(employee => {
-          const shiftInfo = getShiftInfo(employee.id, dateStr, 'day', isRight);
-          const patternId = shiftInfo ? shiftInfo.kintai_pattern_id : 0;
-          const patternName = getPatternName(patternId);
-          
-          calendarHTML += `<td data-employee-id="${employee.id}" data-date="${dateStr}" data-shift-time="day">
-            <div class="shift-cell" data-shift="${patternName}" data-pattern-id="${patternId}" data-side="${isRight ? 'right' : 'left'}" data-employee="${employee.id}" data-date="${dateStr}" data-shift-time="day">${patternName}</div>
-          </td>`;
-        });
-        calendarHTML += '</tr>';
-        
-        // 夜の行
-        calendarHTML += `<tr class="${dayClass} ${todayClass} time-night">
-          <td class="shift-time-label">夜</td>`;
-        
-        // 各従業員のシフトセル（夜）
-        employees.forEach(employee => {
-          const shiftInfo = getShiftInfo(employee.id, dateStr, 'night', isRight);
-          const patternId = shiftInfo ? shiftInfo.kintai_pattern_id : 0;
-          const patternName = getPatternName(patternId);
-          
-          calendarHTML += `<td data-employee-id="${employee.id}" data-date="${dateStr}" data-shift-time="night">
-            <div class="shift-cell" data-shift="${patternName}" data-pattern-id="${patternId}" data-side="${isRight ? 'right' : 'left'}" data-employee="${employee.id}" data-date="${dateStr}" data-shift-time="night">${patternName}</div>
-          </td>`;
-        });
-        calendarHTML += '</tr>';
+      // 日付のクラスを設定（日曜または祝日なら赤色になるようにクラスを指定）
+      let dayClass = '';
+      if (dayOfWeek === 0) {
+        dayClass = 'sun';
+      } else if (dayOfWeek === 6) {
+        dayClass = 'sat';
       }
       
-      calendarHTML += '</tbody></table>';
+      // 祝日の場合はholidayクラスを追加
+      if (isHolidayDate) {
+        dayClass += ' holiday';
+      }
       
-      console.log(`カレンダーHTML生成完了: ${containerId}`);
+      // 今日の日付には特別なクラスを適用
+      const isToday = i === today.getDate() && month === today.getMonth() + 1 && year === today.getFullYear();
+      const todayClass = isToday ? 'today' : '';
       
-      // HTMLを挿入
-      container.innerHTML = calendarHTML;
+      // 日付セルのスタイル（日曜または祝日なら赤色）
+      const dateCellStyle = (dayOfWeek === 0 || isHolidayDate) ? 'style="color: #dc3545; font-weight: bold;"' : '';
       
-      // イベントリスナーの追加
-      const shiftCells = container.querySelectorAll('.shift-cell');
-      console.log(`セル検出: ${shiftCells.length}個のセルを見つけました`);
+      // 日付セルの内容（左右共通）
+      const dateCellContent = `
+        ${i}（${weekDays[dayOfWeek]}）
+        ${isHolidayDate ? `<br><span class="holiday-name">${holidayName}</span>` : ''}
+      `;
       
-      shiftCells.forEach(cell => {
-        // デバッグ用にスタイルを追加
-        cell.style.cursor = 'pointer';
-        
-        // シフトセルのクリックイベント
-        cell.addEventListener('click', function(event) {
-          // クリックされたセルの情報を取得
-          const td = this.parentElement;
-          const employeeId = td.getAttribute('data-employee-id');
-          const date = td.getAttribute('data-date');
-          const shiftTime = td.getAttribute('data-shift-time');
-          const patternName = this.getAttribute('data-shift');
-          const patternId = parseInt(this.getAttribute('data-pattern-id')) || 0;
-          const side = this.getAttribute('data-side');
-          
-          console.log('セルをクリックしました。', {
-            従業員ID: employeeId,
-            日付: date,
-            時間帯: shiftTime,
-            現在のパターン: patternName,
-            パターンID: patternId,
-            カレンダー: side
-          });
-          
-          // 背景色を一時的に変更して視覚的フィードバックを提供
-          const originalBackgroundColor = this.style.backgroundColor;
-          this.style.backgroundColor = '#ffeb3b';  // 黄色でハイライト
-          
-          // 500ms後に元の色に戻す
-          setTimeout(() => {
-            this.style.backgroundColor = originalBackgroundColor;
-          }, 500);
-          
-          if (kintaiPatterns.length === 0) {
-            alert('勤怠パターンが取得できていません');
-            return;
-          }
-          
-          // クリックされたセルを記憶
-          selectedCell = this;
-          
-          // 削除ボタンの表示/非表示を制御
-          const deleteShiftContainer = document.getElementById('deleteShiftContainer');
-          if (deleteShiftContainer) {
-            // パターンIDが設定されている場合のみ削除ボタンを表示
-            if (patternId > 0) {
-              deleteShiftContainer.style.display = 'block';
-            } else {
-              deleteShiftContainer.style.display = 'none';
-            }
-          }
-          
-          // モーダルで勤怠パターン選択を表示
-          $('#patternSelectModal').modal('show');
-        });
-      });
+       // 朝の行
+    calendarHTML += `<tr class="${dayClass} ${todayClass} time-morning">
+    <td class="date-cell" rowspan="3" ${dateCellStyle}>
+      ${dateCellContent}
+    </td>
+    <td class="shift-time-label">朝</td>`;
+  
+  // 各従業員のシフトセル（朝）
+  employees.forEach(employee => {
+    const shiftInfo = getShiftInfo(employee.id, dateStr, 'morning', isRight);
+    const patternId = shiftInfo ? shiftInfo.kintai_pattern_id : 0;
+    const patternName = getPatternName(patternId);
+    
+    calendarHTML += `<td data-employee-id="${employee.id}" data-date="${dateStr}" data-shift-time="morning">
+      <div class="shift-cell" data-shift="${patternName}" data-pattern-id="${patternId}" data-side="${isRight ? 'right' : 'left'}" data-employee="${employee.id}" data-date="${dateStr}" data-shift-time="morning">${patternName}</div>
+    </td>`;
+  });
+  
+  // 右端の日付と時間帯セル（朝の行）- 順序入れ替え
+  calendarHTML += `
+    <td class="date-cell right-date-cell" rowspan="3" ${dateCellStyle}>
+      ${dateCellContent}
+    </td>
+    <td class="shift-time-label right-time-label">朝</td>`;
+  
+  calendarHTML += '</tr>';
+  
+  // 昼の行
+  calendarHTML += `<tr class="${dayClass} ${todayClass} time-day">
+    <td class="shift-time-label">昼</td>`;
+  
+  // 各従業員のシフトセル（昼）
+  employees.forEach(employee => {
+    const shiftInfo = getShiftInfo(employee.id, dateStr, 'day', isRight);
+    const patternId = shiftInfo ? shiftInfo.kintai_pattern_id : 0;
+    const patternName = getPatternName(patternId);
+    
+    calendarHTML += `<td data-employee-id="${employee.id}" data-date="${dateStr}" data-shift-time="day">
+      <div class="shift-cell" data-shift="${patternName}" data-pattern-id="${patternId}" data-side="${isRight ? 'right' : 'left'}" data-employee="${employee.id}" data-date="${dateStr}" data-shift-time="day">${patternName}</div>
+    </td>`;
+  });
+  
+  // 右端の時間帯（昼）- 日付は朝の行で設定済み
+  calendarHTML += `<td class="shift-time-label right-time-label">昼</td>`;
+  
+  calendarHTML += '</tr>';
+  
+  // 夜の行
+  calendarHTML += `<tr class="${dayClass} ${todayClass} time-night">
+    <td class="shift-time-label">夜</td>`;
+  
+  // 各従業員のシフトセル（夜）
+  employees.forEach(employee => {
+    const shiftInfo = getShiftInfo(employee.id, dateStr, 'night', isRight);
+    const patternId = shiftInfo ? shiftInfo.kintai_pattern_id : 0;
+    const patternName = getPatternName(patternId);
+    
+    calendarHTML += `<td data-employee-id="${employee.id}" data-date="${dateStr}" data-shift-time="night">
+      <div class="shift-cell" data-shift="${patternName}" data-pattern-id="${patternId}" data-side="${isRight ? 'right' : 'left'}" data-employee="${employee.id}" data-date="${dateStr}" data-shift-time="night">${patternName}</div>
+    </td>`;
+  });
       
-      // 初期の見た目を設定
-      shiftCells.forEach(cell => {
-        updateShiftCellStyle(cell);
-      });
-      
-      console.log(`カレンダー生成完了: ${containerId}`);
-    } catch (error) {
-      console.error(`カレンダー生成エラー:`, error);
+      // 右端の時間帯（夜）- 日付は朝の行で設定済み
+    calendarHTML += `<td class="shift-time-label right-time-label">夜</td>`;
+    
+    calendarHTML += '</tr>';
     }
+      
+    calendarHTML += '</tbody></table>';
+    
+    console.log(`カレンダーHTML生成完了: ${containerId}`);
+    
+    // HTMLを挿入
+    container.innerHTML = calendarHTML;
+    
+    // イベントリスナーの追加
+    const shiftCells = container.querySelectorAll('.shift-cell');
+    console.log(`セル検出: ${shiftCells.length}個のセルを見つけました`);
+    
+    shiftCells.forEach(cell => {
+      // デバッグ用にスタイルを追加
+      cell.style.cursor = 'pointer';
+      
+      // シフトセルのクリックイベント
+      cell.addEventListener('click', function(event) {
+        // クリックされたセルの情報を取得
+        const td = this.parentElement;
+        const employeeId = td.getAttribute('data-employee-id');
+        const date = td.getAttribute('data-date');
+        const shiftTime = td.getAttribute('data-shift-time');
+        const patternName = this.getAttribute('data-shift');
+        const patternId = parseInt(this.getAttribute('data-pattern-id')) || 0;
+        const side = this.getAttribute('data-side');
+        
+        console.log('セルをクリックしました。', {
+          従業員ID: employeeId,
+          日付: date,
+          時間帯: shiftTime,
+          現在のパターン: patternName,
+          パターンID: patternId,
+          カレンダー: side
+        });
+        
+        // 背景色を一時的に変更して視覚的フィードバックを提供
+        const originalBackgroundColor = this.style.backgroundColor;
+        this.style.backgroundColor = '#ffeb3b';  // 黄色でハイライト
+        
+        // 500ms後に元の色に戻す
+        setTimeout(() => {
+          this.style.backgroundColor = originalBackgroundColor;
+        }, 500);
+        
+        if (kintaiPatterns.length === 0) {
+          alert('勤怠パターンが取得できていません');
+          return;
+        }
+        
+        // クリックされたセルを記憶
+        selectedCell = this;
+        
+        // 削除ボタンの表示/非表示を制御
+        const deleteShiftContainer = document.getElementById('deleteShiftContainer');
+        if (deleteShiftContainer) {
+          // パターンIDが設定されている場合のみ削除ボタンを表示
+          if (patternId > 0) {
+            deleteShiftContainer.style.display = 'block';
+          } else {
+            deleteShiftContainer.style.display = 'none';
+          }
+        }
+        
+        // モーダルで勤怠パターン選択を表示
+        $('#patternSelectModal').modal('show');
+      });
+    });
+    
+    // 初期の見た目を設定
+    shiftCells.forEach(cell => {
+      updateShiftCellStyle(cell);
+    });
+    
+    console.log(`カレンダー生成完了: ${containerId}`);
+  } catch (error) {
+    console.error(`カレンダー生成エラー:`, error);
   }
+}
+      
   
   // 両方のカレンダーを更新する関数
 function updateCalendars() {
@@ -803,7 +834,7 @@ function updateCalendars() {
     // 右カレンダーの日曜日と祝日を赤く
     const rightContainer = document.getElementById('rightCalendar');
     if (rightContainer) {
-      // 日曜日を赤く
+      // すべての日付セル（左端と右端両方）を赤く
       const sundayCells = rightContainer.querySelectorAll('tr.sun .date-cell');
       sundayCells.forEach(cell => {
         cell.style.color = '#dc3545';
@@ -827,6 +858,7 @@ function updateCalendars() {
     }
   });
 }
+
   
   // 初期データ取得 - 祝日データを最初に読み込む
   fetchAndDisplayHolidays()

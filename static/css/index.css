@@ -237,3 +237,73 @@ body {
   line-height: 1;
   margin-top: 2px;
 }
+/* 右側の日付セルのスタイル */
+.right-date-cell {
+  border-left: 1px solid #dee2e6;  /* 左側の罫線を強調 */
+}
+
+/* 日曜日と祝日の日付を赤く表示（左右両方） */
+.horizontal-calendar tr.sun .date-cell,
+.horizontal-calendar tr.holiday .date-cell {
+  color: #dc3545 !important;
+  font-weight: bold;
+}
+
+/* 祝日名のスタイル */
+.holiday-name {
+  font-size: 0.7rem;
+  color: #dc3545;
+  display: block;
+  line-height: 1;
+  margin-top: 2px;
+}
+
+/* 右側の日付セルのスタイル */
+.right-date-cell {
+  border-left: 1px solid #dee2e6;  /* 左側の罫線を強調 */
+}
+
+/* 右側の時間帯セルのスタイル */
+.right-time-label {
+  text-align: center;
+  font-weight: bold;
+  background-color: #f8f9fa;
+  width: 60px; /* 左側と同じ幅にする */
+}
+
+/* 時間帯セルの共通スタイル */
+.shift-time-label {
+  text-align: center;
+  font-weight: bold;
+  background-color: #f8f9fa;
+  width: 60px;
+}
+
+/* 日曜日と祝日の日付を赤く表示（左右両方） */
+.horizontal-calendar tr.sun .date-cell,
+.horizontal-calendar tr.holiday .date-cell {
+  color: #dc3545 !important;
+  font-weight: bold;
+}
+
+/* 祝日名のスタイル */
+.holiday-name {
+  font-size: 0.7rem;
+  color: #dc3545;
+  display: block;
+  line-height: 1;
+  margin-top: 2px;
+}
+
+/* 右端の時間帯セルに背景色を適用 */
+tr.time-morning .right-time-label {
+  background-color: #F8F9FA !important;
+}
+
+tr.time-day .right-time-label {
+  background-color: #F8F9FA !important;
+}
+
+tr.time-night .right-time-label {
+  background-color: #F8F9FA !important;
+}
