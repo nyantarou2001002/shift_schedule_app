@@ -38,6 +38,10 @@ func main() {
 	http.HandleFunc("/api/job_types", handlers.JobTypesHandler)
 	http.HandleFunc("/api/job_types/", handlers.JobTypesHandler)
 
+	// 備考のAPI
+	http.HandleFunc("/api/memos", handlers.GetMemos)
+	http.HandleFunc("/api/saveNoteMemo", handlers.SaveMemo)
+
 	// 静的ファイルサーバー
 	http.Handle("/", http.FileServer(http.Dir("./static")))
 

@@ -42,3 +42,12 @@ type JobType struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
+
+// Memo は備考データを表す構造体
+type Memo struct {
+	ID        int    `json:"id"`
+	Date      string `json:"date"`
+	ShiftTime string `json:"shift_time"`
+	Content   string `json:"content"`
+	IsRight   bool   `json:"is_right"`
+}

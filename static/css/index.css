@@ -307,3 +307,60 @@ tr.time-day .right-time-label {
 tr.time-night .right-time-label {
   background-color: #F8F9FA !important;
 }
+
+
+/* 備考セルのスタイル */
+.note-cell {
+  background-color: #f9f9f9;
+  width: 100px;  /* 幅を設定 */
+  border-left: 1px solid #dee2e6;
+  border-right: 1px solid #dee2e6;
+  vertical-align: middle;
+}
+
+
+/* 備考セルのスタイル強化 */
+.note-cell {
+  background-color: #f9f9f9;
+  width: 100px;
+  border-left: 1px solid #dee2e6;
+  border-right: 1px solid #dee2e6;
+  vertical-align: middle;
+  font-size: 0.85rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: pre-wrap;
+  max-height: 80px;
+  padding: 5px;
+  cursor: pointer;
+}
+
+/* 備考入力エリアのスタイル */
+.note-textarea {
+  padding: 4px;
+  font-size: 0.85rem;
+  border: none;
+  resize: none;
+  width: 100%;
+  box-sizing: border-box;
+  background-color: #fff8e1;
+  transition: background-color 0.2s;
+}
+
+.note-textarea:focus {
+  outline: none;
+  background-color: #fff;
+}
+
+/* 行の色に合わせた備考セルの背景色 */
+tr.time-morning .note-cell {
+  background-color: rgba(255, 248, 230, 0.3);
+}
+
+tr.time-day .note-cell {
+  background-color: rgba(240, 255, 240, 0.3);
+}
+
+tr.time-night .note-cell {
+  background-color: rgba(230, 240, 255, 0.3);
+}
