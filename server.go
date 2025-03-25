@@ -34,6 +34,10 @@ func main() {
 	http.HandleFunc("/api/updateShiftSimulation", handlers.UpdateShiftSimulationHandler)
 	http.HandleFunc("/api/deleteShiftSimulation", handlers.DeleteShiftSimulationHandler)
 
+	// 職種関連のエンドポイント
+	http.HandleFunc("/api/job_types", handlers.JobTypesHandler)
+	http.HandleFunc("/api/job_types/", handlers.JobTypesHandler)
+
 	// 静的ファイルサーバー
 	http.Handle("/", http.FileServer(http.Dir("./static")))
 

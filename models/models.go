@@ -1,5 +1,7 @@
 package models
 
+import "time"
+
 // Employee は従業員の構造体です
 type Employee struct {
 	ID   int    `json:"id"`
@@ -31,4 +33,12 @@ type ShiftSimulation struct {
 	Date            string `json:"date"`
 	ShiftTime       string `json:"shift_time"`
 	KintaiPatternID int    `json:"kintai_pattern_id"`
+}
+
+// JobType - 職種を表すモデル
+type JobType struct {
+	ID        uint      `json:"id" gorm:"primaryKey"`
+	Name      string    `json:"name" gorm:"size:100;not null"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
