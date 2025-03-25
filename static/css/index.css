@@ -1,3 +1,38 @@
+/* freee風のシンプルでクリーンなデザイン */
+body {
+  background-color: #f7f7f7;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  min-height: 100vh;
+}
+/* コンテンツコンテナの最小高さと上部マージン */
+.content-container {
+  min-height: calc(100vh - 56px - 70px); /* navbarの高さ56pxと月選択セクションの高さ70pxを引く */
+  margin-top: 20px; /* 上部マージンを調整 */
+}
+
+/* 左側カラムの右に境界線を表示 */
+.divider-right {
+  border-right: 1px solid #ccc;
+  position: relative;
+}
+
+/* 月選択セクションのスタイル */
+.month-selector {
+  background-color: white;
+  padding: 15px 0;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.month-selector .btn-outline-primary {
+  padding: 8px 16px;
+}
+
+.month-display {
+  font-size: 24px;
+  font-weight: 600;
+  color: #333;
+}
+
 /* 追加：カレンダーコンテナの横スクロール制限 */
 .calendar-container {
     width: 100%;
