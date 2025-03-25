@@ -209,3 +209,15 @@ body {
   font-weight: bold;
   border-left-color: #007bff;
 }
+
+/* 日曜日の日付を赤く表示（優先度高） */
+.horizontal-calendar tr.sun .date-cell {
+  color: #dc3545 !important;
+  font-weight: bold;
+}
+
+/* 今日の日付を強調表示 */
+.horizontal-calendar tr.today .date-cell {
+  background-color: #fffde7;
+  border-left: 3px solid #ffc107;
+}

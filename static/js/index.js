@@ -561,12 +561,11 @@ function handleDeleteShift() {
         // 各日付に対して3行（朝・昼・夜）を作成
         
         // 朝の行
-        calendarHTML += `<tr class="${dayClass} ${todayClass} time-morning">
-          <td class="date-cell" rowspan="3">
-            ${i}（${weekDays[dayOfWeek]}）
-          </td>
-          <td class="shift-time-label">朝</td>`;
-        
+calendarHTML += `<tr class="${dayClass} ${todayClass} time-morning">
+<td class="date-cell" rowspan="3" ${dayOfWeek === 0 ? 'style="color: #dc3545; font-weight: bold;"' : ''}>
+  ${i}（${weekDays[dayOfWeek]}）
+</td>
+<td class="shift-time-label">朝</td>`;
         // 各従業員のシフトセル（朝）
         employees.forEach(employee => {
           const shiftInfo = getShiftInfo(employee.id, dateStr, 'morning', isRight);
@@ -694,16 +693,32 @@ function handleDeleteShift() {
   // 両方のカレンダーを更新する関数
   function updateCalendars() {
     console.log(`カレンダー更新: ${currentYear}年${currentMonth}月`);
-    generateCalendar(currentYear, currentMonth, 'leftCalendar')
-      .then(() => generateCalendar(currentYear, currentMonth, 'rightCalendar'));
+    // カレンダー生成後に強制的に日曜日の色を設定する
+generateCalendar(currentYear, currentMonth, 'leftCalendar')
+.then(() => {
+  // 左カレンダーの日曜日を赤く
+  const leftContainer = document.getElementById('leftCalendar');
+  if (leftContainer) {
+    const sundayCells = leftContainer.querySelectorAll('tr.sun .date-cell');
+    sundayCells.forEach(cell => {
+      cell.style.color = '#dc3545';
+      cell.style.fontWeight = 'bold';
+    });
   }
   
-  // 削除ボタンのイベントリスナーを追加
-  const deleteShiftBtn = document.getElementById('deleteShiftBtn');
-  if (deleteShiftBtn) {
-    deleteShiftBtn.addEventListener('click', function() {
-      handleDeleteShift();
+  return generateCalendar(currentYear, currentMonth, 'rightCalendar');
+})
+.then(() => {
+  // 右カレンダーの日曜日を赤く
+  const rightContainer = document.getElementById('rightCalendar');
+  if (rightContainer) {
+    const sundayCells = rightContainer.querySelectorAll('tr.sun .date-cell');
+    sundayCells.forEach(cell => {
+      cell.style.color = '#dc3545';
+      cell.style.fontWeight = 'bold';
     });
+  }
+});
   }
   
   // 初期データ取得
