@@ -3,6 +3,52 @@ document.addEventListener('DOMContentLoaded', function() {
   const today = new Date();
   let currentYear = today.getFullYear();
   let currentMonth = today.getMonth() + 1; // JavaScriptの月は0から始まるので+1
+
+  // 祝日データを格納する変数を追加
+let holidaysData = {};
+
+// 祝日データを取得して表示する関数
+function fetchAndDisplayHolidays() {
+  return fetch('https://holidays-jp.github.io/api/v1/date.json')
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`祝日API通信エラー: ${response.status}`);
+      }
+      return response.json();
+    })
+    .then(data => {
+      
+      // グローバル変数に保存
+      holidaysData = data;
+      
+      // データの一部を整形して表示
+      const currentYear = new Date().getFullYear();
+      
+      Object.entries(data)
+        .filter(([dateStr]) => dateStr.startsWith(currentYear))
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .forEach(([date, name]) => {
+          const formattedDate = new Date(date).toLocaleDateString('ja-JP', {
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric', 
+            weekday: 'short'
+          });
+        });
+        
+      
+      // データを返して他の処理でも使えるようにする
+      return data;
+    })
+    .catch(error => {
+      console.error('祝日データの取得に失敗しました:', error);
+      holidaysData = {}; // エラー時は空オブジェクト
+      return {};
+    });
+}
+  
+  // ページ読み込み時に祝日データを取得・表示
+  fetchAndDisplayHolidays();
   
   // モーダルの選択肢要素の参照を保持する変数
   let selectedCell = null;
@@ -34,8 +80,12 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // データ取得関数を修正
 function fetchData() {
-  // 勤怠パターンを取得
-  fetch('/api/kintai_patterns')
+  // 最初に祝日データを取得してから他のデータを取得
+  fetchAndDisplayHolidays()
+    .then(() => {
+      // 勤怠パターンを取得
+      return fetch('/api/kintai_patterns');
+    })
     .then(response => response.json())
     .then(data => {
       kintaiPatterns = data;
@@ -479,6 +529,16 @@ function handleDeleteShift() {
       updateShiftCellStyle(cell);
     }
   }
+
+  // 日付が祝日かどうかを判定する関数
+function isHoliday(dateStr) {
+  return holidaysData[dateStr] !== undefined;
+}
+
+// 祝日名を取得する関数
+function getHolidayName(dateStr) {
+  return holidaysData[dateStr] || '';
+}
   
   // シフトセルの見た目を更新する関数
   function updateShiftCellStyle(cell) {
@@ -549,23 +609,38 @@ function handleDeleteShift() {
       calendarHTML += '<tbody>';
       
       for (let i = 1; i <= daysInMonth; i++) {
-        const date = new Date(year, month - 1, i);
-        const dayOfWeek = date.getDay();
-        const dayClass = dayOfWeek === 0 ? 'sun' : (dayOfWeek === 6 ? 'sat' : '');
-        const dateStr = `${year}-${month.toString().padStart(2, '0')}-${i.toString().padStart(2, '0')}`;
-        
-        // 今日の日付には特別なクラスを適用
-        const isToday = i === today.getDate() && month === today.getMonth() + 1 && year === today.getFullYear();
-        const todayClass = isToday ? 'today' : '';
-        
-        // 各日付に対して3行（朝・昼・夜）を作成
-        
-        // 朝の行
-calendarHTML += `<tr class="${dayClass} ${todayClass} time-morning">
-<td class="date-cell" rowspan="3" ${dayOfWeek === 0 ? 'style="color: #dc3545; font-weight: bold;"' : ''}>
-  ${i}（${weekDays[dayOfWeek]}）
-</td>
-<td class="shift-time-label">朝</td>`;
+    const date = new Date(year, month - 1, i);
+    const dayOfWeek = date.getDay();
+    const dateStr = `${year}-${month.toString().padStart(2, '0')}-${i.toString().padStart(2, '0')}`;
+    
+    // 祝日判定
+    const isHolidayDate = isHoliday(dateStr);
+    const holidayName = getHolidayName(dateStr);
+    
+    // 日付のクラスを設定（日曜または祝日なら赤色になるようにクラスを指定）
+    let dayClass = '';
+    if (dayOfWeek === 0) {
+      dayClass = 'sun';
+    } else if (dayOfWeek === 6) {
+      dayClass = 'sat';
+    }
+    
+    // 祝日の場合はholidayクラスを追加
+    if (isHolidayDate) {
+      dayClass += ' holiday';
+    }
+    
+    // 今日の日付には特別なクラスを適用
+    const isToday = i === today.getDate() && month === today.getMonth() + 1 && year === today.getFullYear();
+    const todayClass = isToday ? 'today' : '';
+    
+    // 朝の行
+    calendarHTML += `<tr class="${dayClass} ${todayClass} time-morning">
+      <td class="date-cell" rowspan="3" ${(dayOfWeek === 0 || isHolidayDate) ? 'style="color: #dc3545; font-weight: bold;"' : ''}>
+        ${i}（${weekDays[dayOfWeek]}）
+        ${isHolidayDate ? `<br><span class="holiday-name">${holidayName}</span>` : ''}
+      </td>
+      <td class="shift-time-label">朝</td>`;
         // 各従業員のシフトセル（朝）
         employees.forEach(employee => {
           const shiftInfo = getShiftInfo(employee.id, dateStr, 'morning', isRight);
@@ -691,38 +766,73 @@ calendarHTML += `<tr class="${dayClass} ${todayClass} time-morning">
   }
   
   // 両方のカレンダーを更新する関数
-  function updateCalendars() {
-    console.log(`カレンダー更新: ${currentYear}年${currentMonth}月`);
-    // カレンダー生成後に強制的に日曜日の色を設定する
-generateCalendar(currentYear, currentMonth, 'leftCalendar')
-.then(() => {
-  // 左カレンダーの日曜日を赤く
-  const leftContainer = document.getElementById('leftCalendar');
-  if (leftContainer) {
-    const sundayCells = leftContainer.querySelectorAll('tr.sun .date-cell');
-    sundayCells.forEach(cell => {
-      cell.style.color = '#dc3545';
-      cell.style.fontWeight = 'bold';
-    });
-  }
+function updateCalendars() {
+  console.log(`カレンダー更新: ${currentYear}年${currentMonth}月`);
+  // カレンダー生成後に強制的に日曜日と祝日の色を設定する
+  generateCalendar(currentYear, currentMonth, 'leftCalendar')
+  .then(() => {
+    // 左カレンダーの日曜日と祝日を赤く
+    const leftContainer = document.getElementById('leftCalendar');
+    if (leftContainer) {
+      // 日曜日を赤く
+      const sundayCells = leftContainer.querySelectorAll('tr.sun .date-cell');
+      sundayCells.forEach(cell => {
+        cell.style.color = '#dc3545';
+        cell.style.fontWeight = 'bold';
+      });
+      
+      // 祝日を赤く
+      const holidayCells = leftContainer.querySelectorAll('tr.holiday .date-cell');
+      holidayCells.forEach(cell => {
+        cell.style.color = '#dc3545';
+        cell.style.fontWeight = 'bold';
+      });
+      
+      // 祝日名も赤く
+      const holidayNames = leftContainer.querySelectorAll('.holiday-name');
+      holidayNames.forEach(span => {
+        span.style.color = '#dc3545';
+        span.style.fontSize = '0.7rem';
+        span.style.display = 'block';
+      });
+    }
+    
+    return generateCalendar(currentYear, currentMonth, 'rightCalendar');
+  })
+  .then(() => {
+    // 右カレンダーの日曜日と祝日を赤く
+    const rightContainer = document.getElementById('rightCalendar');
+    if (rightContainer) {
+      // 日曜日を赤く
+      const sundayCells = rightContainer.querySelectorAll('tr.sun .date-cell');
+      sundayCells.forEach(cell => {
+        cell.style.color = '#dc3545';
+        cell.style.fontWeight = 'bold';
+      });
+      
+      // 祝日を赤く
+      const holidayCells = rightContainer.querySelectorAll('tr.holiday .date-cell');
+      holidayCells.forEach(cell => {
+        cell.style.color = '#dc3545';
+        cell.style.fontWeight = 'bold';
+      });
+      
+      // 祝日名も赤く
+      const holidayNames = rightContainer.querySelectorAll('.holiday-name');
+      holidayNames.forEach(span => {
+        span.style.color = '#dc3545';
+        span.style.fontSize = '0.7rem';
+        span.style.display = 'block';
+      });
+    }
+  });
+}
   
-  return generateCalendar(currentYear, currentMonth, 'rightCalendar');
-})
-.then(() => {
-  // 右カレンダーの日曜日を赤く
-  const rightContainer = document.getElementById('rightCalendar');
-  if (rightContainer) {
-    const sundayCells = rightContainer.querySelectorAll('tr.sun .date-cell');
-    sundayCells.forEach(cell => {
-      cell.style.color = '#dc3545';
-      cell.style.fontWeight = 'bold';
+  // 初期データ取得 - 祝日データを最初に読み込む
+  fetchAndDisplayHolidays()
+    .then(() => {
+      fetchData();
     });
-  }
-});
-  }
-  
-  // 初期データ取得
-  fetchData();
   
   // jQuery と Bootstrap が読み込まれていることを確認
   if (window.jQuery) {

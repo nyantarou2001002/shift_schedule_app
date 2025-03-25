@@ -221,3 +221,19 @@ body {
   background-color: #fffde7;
   border-left: 3px solid #ffc107;
 }
+
+/* 日曜日と祝日の日付を赤く表示 */
+.horizontal-calendar tr.sun .date-cell,
+.horizontal-calendar tr.holiday .date-cell {
+  color: #dc3545 !important;
+  font-weight: bold;
+}
+
+/* 祝日名のスタイル */
+.holiday-name {
+  font-size: 0.7rem;
+  color: #dc3545;
+  display: block;
+  line-height: 1;
+  margin-top: 2px;
+}
