@@ -405,6 +405,9 @@ function saveMemo(date, content, isRight) {
   })
   .catch(error => console.error('シフト更新エラー:', error));
   
+  // モーダルを閉じる前にフォーカスを移動
+  document.body.focus();
+  
   // モーダルを閉じる
   $('#patternSelectModal').modal('hide');
   selectedCell = null;
@@ -437,38 +440,43 @@ function saveMemo(date, content, isRight) {
   }
   
   // シフト削除時の処理を修正
-function handleDeleteShift() {
-  if (!selectedCell) {
-    console.error('選択されたセルがありません');
-    return;
-  }
-  
-  // 現在のパターン情報を取得
-  const patternId = parseInt(selectedCell.getAttribute('data-pattern-id')) || 0;
-  if (patternId === 0) {
-    // 既に空の場合は何もしない
+  function handleDeleteShift() {
+    if (!selectedCell) {
+      console.error('選択されたセルがありません');
+      return;
+    }
+    
+    // 現在のパターン情報を取得
+    const patternId = parseInt(selectedCell.getAttribute('data-pattern-id')) || 0;
+    if (patternId === 0) {
+      // 既に空の場合は何もしない
+      // モーダルを閉じる前にフォーカスを移動
+      document.body.focus();
+      $('#patternSelectModal').modal('hide');
+      selectedCell = null;
+      return;
+    }
+    
+    // シフト情報を取得
+    const td = selectedCell.parentElement;
+    const employeeId = parseInt(td.getAttribute('data-employee-id'));
+    const date = td.getAttribute('data-date');
+    const shiftTime = td.getAttribute('data-shift-time');
+    const isRight = selectedCell.getAttribute('data-side') === 'right';
+    
+    console.log(`シフト削除リクエスト: 従業員ID=${employeeId}, 日付=${date}, 時間帯=${shiftTime}, 右側=${isRight}`);
+    
+    // セルの参照をローカル変数に保存（非同期処理内で安全に参照するため）
+    const cellToUpdate = selectedCell;
+    
+    // モーダルを閉じる前にフォーカスを別の場所（ドキュメント本体など）に移動する
+    document.body.focus();
+    
+    // モーダルを閉じる
     $('#patternSelectModal').modal('hide');
+    
+    // selectedCell をリセット
     selectedCell = null;
-    return;
-  }
-  
-  // シフト情報を取得
-  const td = selectedCell.parentElement;
-  const employeeId = parseInt(td.getAttribute('data-employee-id'));
-  const date = td.getAttribute('data-date');
-  const shiftTime = td.getAttribute('data-shift-time');
-  const isRight = selectedCell.getAttribute('data-side') === 'right';
-  
-  console.log(`シフト削除リクエスト: 従業員ID=${employeeId}, 日付=${date}, 時間帯=${shiftTime}, 右側=${isRight}`);
-  
-  // セルの参照をローカル変数に保存（非同期処理内で安全に参照するため）
-  const cellToUpdate = selectedCell;
-  
-  // モーダルを閉じる - 先に閉じることでエラー回避
-  $('#patternSelectModal').modal('hide');
-  
-  // selectedCell をリセット
-  selectedCell = null;
   
   // シフトデータ用のキー
   const key = `${employeeId}_${date}_${shiftTime}`;
@@ -1053,4 +1061,30 @@ function updateCalendars() {
   } else {
     console.error('jQuery が読み込まれていません！');
   }
+
+  $(document).ready(function() {
+    $('#patternSelectModal').on('hidden.bs.modal', function () {
+      // モーダルが閉じられた後にフォーカスをリセット
+      setTimeout(() => {
+        document.activeElement.blur();
+      }, 10);
+    });
+    
+    // 削除ボタンのイベントリスナーも修正
+    const deleteShiftBtn = document.getElementById('deleteShiftBtn');
+    if (deleteShiftBtn) {
+      // 既存のイベントリスナーを削除（もしあれば）
+      const newDeleteBtn = deleteShiftBtn.cloneNode(true);
+      deleteShiftBtn.parentNode.replaceChild(newDeleteBtn, deleteShiftBtn);
+      
+      // 新しいイベントリスナーを追加
+      newDeleteBtn.addEventListener('click', function() {
+        // フォーカスを移動してからハンドラを呼び出す
+        document.body.focus();
+        setTimeout(handleDeleteShift, 10);
+      });
+    }
+  });
+
+  
 });
