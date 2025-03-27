@@ -219,15 +219,16 @@
   tdMemo.setAttribute('style', 'padding: 0 !important; border: none !important; background-color: #000000 !important;');
   tr.appendChild(tdMemo);
   
-  // 削除ボタンセル（絶対配置）
-  const tdActions = document.createElement('td');
-  tdActions.className = 'delete-cell';
-  tdActions.setAttribute('style', 'background-color: #ffffff !important; text-align: center; padding: 2px 4px !important; border: none !important;');
-  
-  const deleteButton = document.createElement('button');
-  deleteButton.innerHTML = '<i class="fas fa-times"></i>';
-  deleteButton.className = 'btn btn-sm btn-outline-danger';
-  deleteButton.setAttribute('style', 'padding: 0px 4px; font-size: 0.7rem;');
+  // 削除ボタンセル（絶対配置）- 修正版
+const tdActions = document.createElement('td');
+tdActions.className = 'delete-cell';
+tdActions.setAttribute('style', 'background-color: transparent !important; text-align: center; padding: 2px 4px !important; border: none !important; position: relative !important; overflow: visible !important; z-index: 5 !important;');
+
+const deleteButton = document.createElement('button');
+deleteButton.innerHTML = '<i class="fas fa-times"></i>';
+deleteButton.className = 'btn btn-sm btn-outline-danger';
+// より強力なスタイル設定
+deleteButton.setAttribute('style', 'position: absolute !important; top: -14px !important; right: 5px !important; z-index: 10 !important; padding: 0px 4px !important; font-size: 0.7rem !important; background-color: white !important; box-shadow: 0 0 3px rgba(0,0,0,0.2) !important; border-radius: 3px !important;');
   
   // 削除ボタンのイベントリスナー
   deleteButton.addEventListener('click', function() {
