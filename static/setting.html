@@ -6,6 +6,8 @@
   <title>従業員設定</title>
   <!-- Bootstrap CSS -->
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <!-- Font Awesome の追加 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
   <style>
     /* freee風のシンプルでクリーンなデザイン */
     body {
@@ -63,24 +65,69 @@
   <div class="container mt-5">
 
     <!-- 従業員追加フォーム -->
-    <div class="card mb-4">
-      <div class="card-header">
-        <h4 class="mb-0">従業員追加</h4>
-      </div>
-      <div class="card-body">
-        <form id="addEmployeeForm">
-          <div class="form-group">
-            <label for="employeeName">名前 <span style="color:red;">*</span></label>
-            <input type="text" class="form-control" id="employeeName" placeholder="名前を入力" required>
-          </div>
-          <div class="form-group">
-            <label for="employeeMemo">メモ</label>
-            <textarea class="form-control" id="employeeMemo" rows="2" placeholder="任意でメモを入力"></textarea>
-          </div>
-          <button type="submit" class="btn btn-primary">追加</button>
-        </form>
-      </div>
-    </div>
+<div class="card mb-4">
+  <div class="card-header">
+    <h4 class="mb-0">従業員追加</h4>
+  </div>
+  <div class="card-body">
+    
+    <!-- 従業員追加フォームに以下のように修正してください -->
+<form id="addEmployeeForm">
+  <div class="form-group">
+    <label for="employeeName">名前 <span style="color:red;">*</span></label>
+    <input type="text" class="form-control" id="employeeName" placeholder="名前を入力" required>
+  </div>
+  <div class="form-group">
+    <label for="employeeMemo">メモ</label>
+    <textarea class="form-control" id="employeeMemo" rows="2" placeholder="任意でメモを入力"></textarea>
+  </div>
+  <div class="d-flex">
+    <button type="submit" class="btn btn-primary mr-2">追加</button>
+    <button type="button" id="addDividerBtn" class="btn btn-outline-secondary">
+      <i class="fas fa-minus"></i> 区分線追加
+    </button>
+  </div>
+</form>
+  </div>
+</div>
+
+<!-- 従業員追加フォームの後に追加 -->
+<script>
+  // ページロード時に実行される
+  window.addEventListener('load', function() {
+    console.log("ページが完全に読み込まれました");
+    
+    // ボタン要素を直接取得して確認
+    const dividerBtn = document.getElementById('addDividerBtn');
+    console.log("インラインスクリプトで見つけたボタン:", dividerBtn);
+    
+    if (dividerBtn) {
+      // クリックイベントを直接設定
+      dividerBtn.onclick = function() {
+        console.log("インラインスクリプトのクリックイベント発生！");
+        
+        // 実際の処理
+        fetch('/api/addEmployee', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: "black_bar", memo: "区分線" })
+        })
+        .then(response => response.json())
+        .then(data => {
+          alert('区分線追加成功!');
+          location.reload(); // ページを再読み込み
+        })
+        .catch(error => {
+          alert('エラー: ' + error);
+        });
+        
+        return false; // イベントのデフォルト動作を防止
+      };
+      
+      console.log("インラインスクリプトでボタンにイベントを設定しました");
+    }
+  });
+</script>
 
     <!-- 従業員一覧 -->
     <div class="card">

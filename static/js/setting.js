@@ -121,6 +121,41 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     loadEmployees();
+
+    // 区分線追加ボタンのイベントリスナー
+    const addDividerBtn = document.getElementById('addDividerBtn');
+    if (addDividerBtn) {
+        addDividerBtn.addEventListener('click', function() {
+            // クリック時にコンソールにログ出力（デバッグ用）
+            console.log('区分線追加ボタンがクリックされました');
+            
+            // AddEmployeeHandler にリクエストを送信
+            fetch('/api/addEmployee', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    name: "black_bar", 
+                    memo: "区分線" 
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.text().then(text => { throw new Error(text) });
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('区分線追加成功:', data);
+                // 成功したら従業員一覧を再読み込み
+                loadEmployees();
+            })
+            .catch(error => {
+                console.error('区分線追加エラー:', error);
+                alert('区分線の追加に失敗しました: ' + error.message);
+            });
+        });
+    }
+
     
     // 従業員追加フォームの処理（既存の実装と同様）
     const addEmployeeForm = document.getElementById('addEmployeeForm');
