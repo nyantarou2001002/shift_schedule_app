@@ -504,3 +504,22 @@ tr.time-night .note-cell {
 .horizontal-calendar td {
   overflow: visible;
 }
+
+/* テーブルの行の高さを固定 */
+.horizontal-calendar tr {
+  height: 45px;
+}
+
+/* カレンダー内のセルオーバーフロー設定 */
+.horizontal-calendar td {
+  overflow: visible;
+}
+
+/* Bootstrap 4には標準でないクラスを追加 */
+.overflow-y-hidden {
+  overflow-y: hidden !important;
+}
+
+.overflow-x-auto {
+  overflow-x: auto !important;
+}

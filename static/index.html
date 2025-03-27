@@ -75,37 +75,38 @@
 <div class="container-fluid d-flex flex-column content-container">
   <div class="row flex-grow-1">
     <!-- 左側のコンテンツ - シフト表カレンダー -->
-    <div class="col-md-6 divider-right py-4 transition-width" id="leftContentCol">
-      <div class="container">
-        <div class="calendar mb-4">
-          <div class="calendar-header">
-            <h5 class="mb-0">シフト表カレンダー(希望)</h5>
-          </div>
-          <!-- Bootstrap のテーブルレスポンシブクラスを追加 -->
-          <div class="calendar-container table-responsive">
-            <div id="leftCalendar">
-              <!-- カレンダーはJSで動的に生成 -->
-            </div>
-          </div>
+<div class="col-md-6 divider-right py-4 transition-width" id="leftContentCol">
+  <div class="container">
+    <div class="calendar mb-4">
+      <div class="calendar-header">
+        <h5 class="mb-0">シフト表カレンダー(希望)</h5>
+      </div>
+      <!-- 横スクロールのみのクラスに変更 -->
+      <div class="calendar-container table-responsive-md overflow-x-auto overflow-y-hidden" style="max-height:none; padding-bottom:15px;">
+        <div id="leftCalendar">
+          <!-- カレンダーはJSで動的に生成 -->
         </div>
       </div>
     </div>
-    <!-- 右側のコンテンツ - シフト表カレンダー -->
-    <div class="col-md-6 py-4 transition-width" id="rightContentCol">
-      <div class="container">
-        <div class="calendar mb-4">
-          <div class="calendar-header">
-            <h5 class="mb-0">シフト表カレンダー</h5>
-          </div>
-          <!-- Bootstrap のテーブルレスポンシブクラスを追加 -->
-          <div class="calendar-container table-responsive overflow-auto" id="rightCalendarContainer">
-            <div id="rightCalendar">
-              <!-- カレンダーはJSで動的に生成 -->
-            </div>
-          </div>
+  </div>
+</div>
+
+<!-- 右側のコンテンツ - シフト表カレンダー -->
+<div class="col-md-6 py-4 transition-width" id="rightContentCol">
+  <div class="container">
+    <div class="calendar mb-4">
+      <div class="calendar-header">
+        <h5 class="mb-0">シフト表カレンダー</h5>
+      </div>
+      <!-- 横スクロールのみのクラスに変更 -->
+      <div class="calendar-container table-responsive-md overflow-x-auto overflow-y-hidden" id="rightCalendarContainer" style="max-height:none; padding-bottom:15px;">
+        <div id="rightCalendar">
+          <!-- カレンダーはJSで動的に生成 -->
         </div>
       </div>
     </div>
+  </div>
+</div>
   </div>
 </div>
   </div>

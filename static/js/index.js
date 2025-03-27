@@ -120,6 +120,16 @@ if (fullscreenBtn) {
     // 状態をローカルストレージに保存
     localStorage.setItem('calendarFullscreen', isFullscreen);
     
+    // 先に両方のカレンダーコンテナから縦スクロールバーを削除
+    const allCalendarContainers = document.querySelectorAll('.calendar-container');
+    allCalendarContainers.forEach(container => {
+      container.classList.add('overflow-x-auto', 'overflow-y-hidden');
+      container.classList.remove('overflow-auto');
+      container.style.overflowY = 'hidden';
+      container.style.maxHeight = 'none';
+      container.style.paddingBottom = '15px';
+    });
+    
     if (isFullscreen) {
       // 全画面モード - Bootstrap のグリッドシステムを活用
       leftContentCol.classList.add('d-none');
@@ -142,14 +152,6 @@ if (fullscreenBtn) {
       const calendarContainer = rightContentCol.querySelector('.calendar-container');
       if (calendarContainer) {
         calendarContainer.classList.add('w-100');
-        
-        // Bootstrapのスクロールクラスを調整
-        calendarContainer.classList.remove('overflow-auto');
-        calendarContainer.classList.add('overflow-hidden'); // 縦スクロール非表示
-        
-        // スタイルの直接操作
-        calendarContainer.style.overflowY = 'hidden';
-        calendarContainer.style.maxHeight = 'none';
       }
     } else {
       // 通常モード - Bootstrap のグリッドシステムに戻す
@@ -169,25 +171,22 @@ if (fullscreenBtn) {
         rightContainer.classList.add('container');
       }
 
-      // カレンダーコンテナを元に戻す
+      // カレンダーコンテナのwidthクラスを削除
       const calendarContainer = rightContentCol.querySelector('.calendar-container');
       if (calendarContainer) {
         calendarContainer.classList.remove('w-100');
-        
-        // Bootstrapのスクロールクラスを元に戻す
-        calendarContainer.classList.remove('overflow-hidden');
-        calendarContainer.classList.add('overflow-auto');
-        
-        // スタイルの直接操作をリセット
-        calendarContainer.style.overflowY = '';
-        calendarContainer.style.maxHeight = '';
       }
     }
     
-    // カレンダー再描画（レイアウト調整のため）
+    // カレンダー再描画前に再度スタイルを強制適用
     setTimeout(() => {
-      updateCalendars();
-    }, 300);
+      applyCalendarContainerSettings();
+      
+      // その後、カレンダー再描画
+      setTimeout(() => {
+        updateCalendars();
+      }, 50);
+    }, 10);
   });
 }
 
@@ -1143,6 +1142,66 @@ function applyResponsiveTable() {
   });
 }
 
+// 両方のカレンダーコンテナの設定を適用
+function applyCalendarContainerSettings() {
+  const containers = document.querySelectorAll('.calendar-container');
+  containers.forEach(container => {
+    // Bootstrapのクラスで設定
+    container.classList.add('table-responsive-md', 'overflow-x-auto');
+    container.classList.remove('overflow-auto');
+    
+    // 縦スクロールを無効にするクラスを追加
+    container.classList.add('overflow-y-hidden');
+    
+    // インラインスタイルも設定
+    container.style.maxHeight = 'none';
+    container.style.paddingBottom = '15px';
+    
+    // テーブル設定
+    const table = container.querySelector('table');
+    if (table) {
+      table.classList.add('mb-0'); // マージンボトムを0に
+    }
+  });
+}
+
+// ページロード時に実行
+applyCalendarContainerSettings();
+
+// 両カレンダーの同期スクロール機能を実装する関数
+function setupSyncScroll() {
+  const leftContainer = document.querySelector('#leftContentCol .calendar-container');
+  const rightContainer = document.querySelector('#rightContentCol .calendar-container');
+  
+  // コンテナが見つからない場合は何もしない
+  if (!leftContainer || !rightContainer) return;
+  
+  // 同期スクロールが行われているかを示すフラグ（ループを防止）
+  let isSyncing = false;
+  
+  // 左のカレンダーがスクロールされたとき
+  leftContainer.addEventListener('scroll', function() {
+    if (!isSyncing && !isFullscreen) { // 全画面表示時以外の時だけ同期
+      isSyncing = true;
+      rightContainer.scrollLeft = this.scrollLeft;
+      rightContainer.scrollTop = this.scrollTop;
+      setTimeout(() => { isSyncing = false; }, 10);
+    }
+  });
+  
+  // 右のカレンダーがスクロールされたとき
+  rightContainer.addEventListener('scroll', function() {
+    if (!isSyncing && !isFullscreen) { // 全画面表示時以外の時だけ同期
+      isSyncing = true;
+      leftContainer.scrollLeft = this.scrollLeft;
+      leftContainer.scrollTop = this.scrollTop;
+      setTimeout(() => { isSyncing = false; }, 10);
+    }
+  });
+  
+  console.log('同期スクロール設定完了');
+}
+
 // 両方のカレンダーを更新する関数
 async function updateCalendars() {
   console.log(`カレンダー更新: ${currentYear}年${currentMonth}月`);
@@ -1208,6 +1267,12 @@ async function updateCalendars() {
     
     // レスポンシブテーブルクラスを適用
     applyResponsiveTable();
+
+    // カレンダーコンテナの設定を適用
+    applyCalendarContainerSettings();
+
+    // 同期スクロール設定を適用
+    setupSyncScroll();
     
   } catch (error) {
     console.error('カレンダー更新エラー:', error);
