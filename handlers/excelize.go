@@ -297,49 +297,65 @@ func ExportShiftExcelHandler(w http.ResponseWriter, r *http.Request) {
 		f.SetCellStyle(sheetName, "A3", headerRange, headerStyle)
 	}
 
-	// 日付と曜日のセルスタイル（通常）
-	normalDateStyle, _ := f.NewStyle(&excelize.Style{
-		Alignment: &excelize.Alignment{
-			Horizontal: "center",
-			Vertical:   "center",
-		},
-		Border: []excelize.Border{
-			{Type: "top", Color: "#D0D0D0", Style: 1},
-			{Type: "bottom", Color: "#D0D0D0", Style: 1},
-			{Type: "left", Color: "#D0D0D0", Style: 1},
-			{Type: "right", Color: "#D0D0D0", Style: 1},
-		},
-	})
-
-	// 日付と曜日のセルスタイル（休日・削除日）
-	redDateStyle, _ := f.NewStyle(&excelize.Style{
-		Font: &excelize.Font{
-			Color: "#FF0000",
-			Bold:  true,
-		},
-		Alignment: &excelize.Alignment{
-			Horizontal: "center",
-			Vertical:   "center",
-		},
-		Border: []excelize.Border{
-			{Type: "top", Color: "#D0D0D0", Style: 1},
-			{Type: "bottom", Color: "#D0D0D0", Style: 1},
-			{Type: "left", Color: "#D0D0D0", Style: 1},
-			{Type: "right", Color: "#D0D0D0", Style: 1},
-		},
-	})
-
 	// 日付行
 	currentRow := 4
 	for day := 1; day <= daysInMonth; day++ {
 		date := fmt.Sprintf("%d-%02d-%02d", year, month, day)
 		weekday := getWeekdayJapanese(year, month, day)
 
+		// 行の背景色（偶数行は薄いグレー、奇数行は白）
+		rowBgColor := "#FFFFFF" // 奇数行は白
+		if day%2 == 0 {
+			rowBgColor = "#F8F8F8" // 偶数行は薄いグレー
+		}
+
 		// 色設定の判定（祝日、日曜日、削除された日付）
 		isHolidayDate := isHoliday(year, month, day)
 		isSunday := time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC).Weekday() == time.Sunday
 		isDeleted := isDateDeleted(date)
 		isRed := isHolidayDate || isSunday || isDeleted
+
+		// 日付と曜日のセルスタイル（通常）- 行ごとの背景色を追加
+		normalDateStyle, _ := f.NewStyle(&excelize.Style{
+			Alignment: &excelize.Alignment{
+				Horizontal: "center",
+				Vertical:   "center",
+			},
+			Border: []excelize.Border{
+				{Type: "top", Color: "#D0D0D0", Style: 1},
+				{Type: "bottom", Color: "#D0D0D0", Style: 1},
+				{Type: "left", Color: "#D0D0D0", Style: 1},
+				{Type: "right", Color: "#D0D0D0", Style: 1},
+			},
+			Fill: excelize.Fill{
+				Type:    "pattern",
+				Color:   []string{rowBgColor},
+				Pattern: 1,
+			},
+		})
+
+		// 日付と曜日のセルスタイル（休日・削除日）- 行ごとの背景色を追加
+		redDateStyle, _ := f.NewStyle(&excelize.Style{
+			Font: &excelize.Font{
+				Color: "#FF0000",
+				Bold:  true,
+			},
+			Alignment: &excelize.Alignment{
+				Horizontal: "center",
+				Vertical:   "center",
+			},
+			Border: []excelize.Border{
+				{Type: "top", Color: "#D0D0D0", Style: 1},
+				{Type: "bottom", Color: "#D0D0D0", Style: 1},
+				{Type: "left", Color: "#D0D0D0", Style: 1},
+				{Type: "right", Color: "#D0D0D0", Style: 1},
+			},
+			Fill: excelize.Fill{
+				Type:    "pattern",
+				Color:   []string{rowBgColor},
+				Pattern: 1,
+			},
+		})
 
 		// 全セクションの日付列と曜日列にデータを設定
 		for i := 0; i < len(allDateCols); i++ {
@@ -371,6 +387,29 @@ func ExportShiftExcelHandler(w http.ResponseWriter, r *http.Request) {
 			f.SetCellValue(sheetName, fmt.Sprintf("%s%d", memoCol, currentRow), memo)
 		}
 
+		// 備考セルのスタイル - 行ごとの背景色を追加
+		memoStyle, _ := f.NewStyle(&excelize.Style{
+			Alignment: &excelize.Alignment{
+				Vertical: "top", // 上揃え
+				WrapText: true,  // テキストの折り返し
+			},
+			Border: []excelize.Border{
+				{Type: "top", Color: "#D0D0D0", Style: 1},
+				{Type: "bottom", Color: "#D0D0D0", Style: 1},
+				{Type: "left", Color: "#000000", Style: 1},  // 左罫線を強調
+				{Type: "right", Color: "#000000", Style: 1}, // 右罫線も強調
+			},
+			Fill: excelize.Fill{
+				Type:    "pattern",
+				Color:   []string{rowBgColor},
+				Pattern: 1,
+			},
+		})
+
+		// 備考セルにスタイル適用
+		memoCellRef := fmt.Sprintf("%s%d", memoCol, currentRow)
+		f.SetCellStyle(sheetName, memoCellRef, memoCellRef, memoStyle)
+
 		// 各セクションの従業員ごとにシフトデータを取得してまとめる
 		for sectionIdx, empCols := range sectionEmpCols {
 			// 当該セクションの従業員列を処理
@@ -384,6 +423,35 @@ func ExportShiftExcelHandler(w http.ResponseWriter, r *http.Request) {
 				empIndex += colIdx // 現在のセクション内のインデックス
 
 				emp := employees[empIndex]
+				cellRef := fmt.Sprintf("%s%d", empCol, currentRow)
+
+				// 削除された日付の場合はダッシュ「-」を表示
+				if isDeleted {
+					f.SetCellValue(sheetName, cellRef, "-")
+					// 削除された日付用のスタイルをセット（背景色も含める）
+					deletedStyle, _ := f.NewStyle(&excelize.Style{
+						Alignment: &excelize.Alignment{
+							Horizontal: "center",
+							Vertical:   "center",
+						},
+						Font: &excelize.Font{
+							Bold: true,
+						},
+						Border: []excelize.Border{
+							{Type: "top", Color: "#D0D0D0", Style: 1},
+							{Type: "bottom", Color: "#D0D0D0", Style: 1},
+							{Type: "left", Color: "#D0D0D0", Style: 1},
+							{Type: "right", Color: "#D0D0D0", Style: 1},
+						},
+						Fill: excelize.Fill{
+							Type:    "pattern",
+							Color:   []string{rowBgColor},
+							Pattern: 1,
+						},
+					})
+					f.SetCellStyle(sheetName, cellRef, cellRef, deletedStyle)
+					continue
+				}
 
 				// 朝・昼・夜のシフトを取得して1つのセルにまとめる
 				if emp.ID > 0 {
@@ -419,7 +487,7 @@ func ExportShiftExcelHandler(w http.ResponseWriter, r *http.Request) {
 						if err != nil {
 							log.Printf("朝パターン名取得エラー: ID=%d, エラー=%v",
 								morningShift.PatternID, err)
-							morningPatternName = fmt.Sprintf("ID:%d", morningShift.PatternID)
+							morningPatternName = "未定義"
 						}
 					}
 
@@ -428,7 +496,7 @@ func ExportShiftExcelHandler(w http.ResponseWriter, r *http.Request) {
 						if err != nil {
 							log.Printf("昼パターン名取得エラー: ID=%d, エラー=%v",
 								dayShift.PatternID, err)
-							dayPatternName = fmt.Sprintf("ID:%d", dayShift.PatternID)
+							dayPatternName = "未定義"
 						}
 					}
 
@@ -437,7 +505,7 @@ func ExportShiftExcelHandler(w http.ResponseWriter, r *http.Request) {
 						if err != nil {
 							log.Printf("夜パターン名取得エラー: ID=%d, エラー=%v",
 								eveningShift.PatternID, err)
-							eveningPatternName = fmt.Sprintf("ID:%d", eveningShift.PatternID)
+							eveningPatternName = "未定義"
 						}
 					}
 
@@ -462,11 +530,10 @@ func ExportShiftExcelHandler(w http.ResponseWriter, r *http.Request) {
 							emp.ID, emp.Name, date, morningPatternName, dayPatternName, eveningPatternName, combinedPattern)
 					}
 
-					cellRef := fmt.Sprintf("%s%d", empCol, currentRow)
 					f.SetCellValue(sheetName, cellRef, combinedPattern)
 
-					// パターンによって色を設定
-					setShiftCellStyleCombined(f, sheetName, cellRef, morningPatternName, dayPatternName, eveningPatternName)
+					// パターンによって色を設定（行ごとの背景色を追加）
+					setShiftCellStyleCombined(f, sheetName, cellRef, morningPatternName, dayPatternName, eveningPatternName, rowBgColor)
 				}
 			}
 		}
@@ -505,26 +572,6 @@ func ExportShiftExcelHandler(w http.ResponseWriter, r *http.Request) {
 	for row := 3; row < 4+daysInMonth; row++ {
 		cellRef := fmt.Sprintf("%s%d", rightDateCol, row)
 		f.SetCellStyle(sheetName, cellRef, cellRef, rightDividerStyle)
-	}
-
-	// 備考セルのスタイルを改善
-	memoStyle, _ := f.NewStyle(&excelize.Style{
-		Alignment: &excelize.Alignment{
-			Vertical: "top", // 上揃え
-			WrapText: true,  // テキストの折り返し
-		},
-		Border: []excelize.Border{
-			{Type: "top", Color: "#D0D0D0", Style: 1},
-			{Type: "bottom", Color: "#D0D0D0", Style: 1},
-			{Type: "left", Color: "#000000", Style: 1},  // 左罫線を強調
-			{Type: "right", Color: "#000000", Style: 1}, // 右罫線も強調
-		},
-	})
-
-	// 備考セルにスタイル適用
-	for row := 4; row < 4+daysInMonth; row++ {
-		memoCellRef := fmt.Sprintf("%s%d", memoCol, row)
-		f.SetCellStyle(sheetName, memoCellRef, memoCellRef, memoStyle)
 	}
 
 	// 列幅の調整 - すべての日付と曜日の列
@@ -570,7 +617,7 @@ func ExportShiftExcelHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // シフトパターンに応じたセルスタイルを設定（朝昼夜の組み合わせ）
-func setShiftCellStyleCombined(f *excelize.File, sheetName, cellRef, morningPattern, dayPattern, eveningPattern string) {
+func setShiftCellStyleCombined(f *excelize.File, sheetName, cellRef, morningPattern, dayPattern, eveningPattern, bgColor string) {
 	// 基本のスタイル設定（中央揃え）
 	baseStyle := &excelize.Style{
 		Alignment: &excelize.Alignment{
@@ -608,6 +655,13 @@ func setShiftCellStyleCombined(f *excelize.File, sheetName, cellRef, morningPatt
 		{Type: "bottom", Color: "#D0D0D0", Style: 1},
 		{Type: "left", Color: "#D0D0D0", Style: 1},
 		{Type: "right", Color: "#D0D0D0", Style: 1},
+	}
+
+	// 背景色を設定
+	baseStyle.Fill = excelize.Fill{
+		Type:    "pattern",
+		Color:   []string{bgColor},
+		Pattern: 1,
 	}
 
 	// スタイルを適用
