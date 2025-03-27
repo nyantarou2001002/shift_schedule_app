@@ -75,6 +75,269 @@ const fullscreenBtnText = document.getElementById('fullscreenBtnText');
 const leftContentCol = document.getElementById('leftContentCol');
 const rightContentCol = document.getElementById('rightContentCol');
 
+// 日付選択の状態管理
+let deletedDates = {};
+
+// 日付セルにイベントリスナーを追加する関数
+function setupDateCellListeners(container) {
+  const dateCells = container.querySelectorAll('.date-cell');
+  
+  dateCells.forEach(cell => {
+    // クリックイベント
+    cell.addEventListener('click', function() {
+      // クリックされた日付を特定
+      let dateStr;
+      
+      // 左側の日付セルか右側の日付セルかを判定
+      if (this.classList.contains('right-date-cell')) {
+        // 右側の日付セルの場合
+        const row = this.closest('tr');
+        const noteCell = row.querySelector('.note-cell');
+        if (noteCell) {
+          dateStr = noteCell.getAttribute('data-date');
+        }
+      } else {
+        // 左側の日付セルの場合
+        const row = this.closest('tr');
+        const noteCell = row.querySelector('.note-cell');
+        if (noteCell) {
+          dateStr = noteCell.getAttribute('data-date');
+        }
+      }
+      
+      if (!dateStr) return;
+      
+      // 日付の削除状態を切り替え
+      toggleDateDeletion(dateStr);
+    });
+  });
+}
+
+// 日付の削除状態を切り替える関数
+function toggleDateDeletion(dateStr) {
+  // 現在の状態を取得
+  const isDeleted = deletedDates[dateStr];
+  const willBeDeleted = !isDeleted;
+  
+  // APIリクエスト
+  fetch('/api/toggleDateDeletion', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      date: dateStr,
+      is_deleted: willBeDeleted
+    })
+  })
+  .then(response => {
+    if (!response.ok) {
+      throw new Error('日付の削除状態の更新に失敗しました');
+    }
+    return response.json();
+  })
+  .then(result => {
+    console.log(`日付の削除状態を更新: ${dateStr}, 削除=${willBeDeleted}`);
+    
+    // メモリ上の状態を更新
+    if (willBeDeleted) {
+      deletedDates[dateStr] = true;
+      highlightDeletedDateRows(dateStr);
+      deleteAllShiftsForDate(dateStr);
+    } else {
+      deletedDates[dateStr] = false;
+      clearDeletedDateHighlight(dateStr);
+    }
+  })
+  .catch(error => {
+    console.error('日付の削除状態の更新エラー:', error);
+    alert('削除状態の更新に失敗しました: ' + error.message);
+  });
+}
+
+
+// 削除された日付を取得する関数
+function fetchDeletedDates() {
+  return fetch(`/api/deletedDates?yearMonth=${formatYearMonth(currentYear, currentMonth)}`)
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('削除された日付の取得に失敗しました');
+      }
+      return response.json();
+    })
+    .then(dates => {
+      // 初期化
+      deletedDates = {};
+      
+      // 取得したデータをオブジェクトに変換
+      dates.forEach(date => {
+        deletedDates[date] = true;
+      });
+      
+      console.log(`削除された日付を取得しました: ${dates.length}件`);
+      return dates;
+    })
+    .catch(error => {
+      console.error('削除された日付の取得エラー:', error);
+      return [];
+    });
+}
+
+// 削除状態の日付をローカルストレージに保存する関数
+function saveDeletedDatesToLocalStorage() {
+  const currentYearMonth = formatYearMonth(currentYear, currentMonth);
+  const storageKey = `deletedDates_${currentYearMonth}`;
+  
+  // 削除状態の日付だけを配列として保存
+  const deletedDatesList = Object.keys(deletedDates).filter(date => deletedDates[date]);
+  
+  localStorage.setItem(storageKey, JSON.stringify(deletedDatesList));
+  console.log(`削除状態の日付を保存しました: ${deletedDatesList.length}件`);
+}
+
+// ローカルストレージから削除状態の日付を読み込む関数
+function loadDeletedDatesFromLocalStorage() {
+  const currentYearMonth = formatYearMonth(currentYear, currentMonth);
+  const storageKey = `deletedDates_${currentYearMonth}`;
+  
+  const savedDates = localStorage.getItem(storageKey);
+  if (savedDates) {
+    try {
+      const deletedDatesList = JSON.parse(savedDates);
+      
+      // 初期化
+      deletedDates = {};
+      
+      // 読み込んだ日付を削除状態にセット
+      deletedDatesList.forEach(dateStr => {
+        deletedDates[dateStr] = true;
+      });
+      
+      console.log(`削除状態の日付を読み込みました: ${deletedDatesList.length}件`);
+    } catch (error) {
+      console.error('削除状態の日付の読み込みに失敗しました:', error);
+      deletedDates = {};
+    }
+  } else {
+    // 保存データがなければ初期化
+    deletedDates = {};
+  }
+}
+
+// 削除された日付のハイライトを解除する関数
+function clearDeletedDateHighlight(dateStr) {
+  // 両方のカレンダーから削除状態のハイライトを解除
+  clearCalendarDeletedHighlight('leftCalendar', dateStr);
+  clearCalendarDeletedHighlight('rightCalendar', dateStr);
+}
+
+// 特定のカレンダーの削除状態のハイライトを解除する関数
+function clearCalendarDeletedHighlight(calendarId, dateStr) {
+  const calendar = document.getElementById(calendarId);
+  if (!calendar) return;
+  
+  // data-date属性が一致する行を検索
+  calendar.querySelectorAll(`tr`).forEach(row => {
+    const cells = row.querySelectorAll(`[data-date="${dateStr}"]`);
+    if (cells.length > 0) {
+      row.classList.remove('deleted-date-row');
+    }
+  });
+}
+
+// 削除された日付の行をハイライトする関数
+function highlightDeletedDateRows(dateStr) {
+  // 両方のカレンダーで削除状態の行をハイライト
+  highlightCalendarDeletedRows('leftCalendar', dateStr);
+  highlightCalendarDeletedRows('rightCalendar', dateStr);
+}
+
+// 特定のカレンダーの削除状態の行をハイライトする関数
+function highlightCalendarDeletedRows(calendarId, dateStr) {
+  const calendar = document.getElementById(calendarId);
+  if (!calendar) return;
+  
+  // data-date属性が一致する行を検索
+  calendar.querySelectorAll(`tr`).forEach(row => {
+    const cells = row.querySelectorAll(`[data-date="${dateStr}"]`);
+    if (cells.length > 0) {
+      row.classList.add('deleted-date-row');
+    }
+  });
+}
+
+// 特定の日付の全シフトを削除する関数
+function deleteAllShiftsForDate(dateStr) {
+  // 左側カレンダー（希望）のシフトを削除
+  deleteShiftsForCalendar(dateStr, false);
+  
+  // 右側カレンダー（確定）のシフトを削除
+  deleteShiftsForCalendar(dateStr, true);
+}
+
+// 特定のカレンダーの特定の日付のシフトを削除する関数
+function deleteShiftsForCalendar(dateStr, isRight) {
+  // データストアを選択
+  const dataStore = isRight ? rightShiftsData : shiftsData;
+  
+  // キーのプレフィックスを作成
+  const keyPrefix = `_${dateStr}_`;
+  
+  // 削除するキーを収集
+  const keysToDelete = Object.keys(dataStore).filter(key => key.includes(keyPrefix));
+  
+  // シフトデータを一括削除するAPIリクエスト
+  const apiEndpoint = isRight ? '/api/deleteDateShiftsSimulation' : '/api/deleteDateShifts';
+  
+  // 削除リクエスト送信
+  fetch(apiEndpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ date: dateStr })
+  })
+  .then(response => {
+    if (!response.ok) {
+      return response.text().then(text => {
+        throw new Error(`サーバーエラー (${response.status}): ${text}`);
+      });
+    }
+    return response.json();
+  })
+  .then(result => {
+    console.log(`${isRight ? '右側' : '左側'}カレンダーの${dateStr}のシフトを削除:`, result);
+    
+    // メモリ上のデータも削除
+    keysToDelete.forEach(key => {
+      delete dataStore[key];
+    });
+    
+    // UI更新 - シフトセルを空にする
+    updateShiftCellsDisplay(dateStr, isRight);
+  })
+  .catch(error => {
+    console.error(`シフト一括削除エラー (${isRight ? '右側' : '左側'}):`, error);
+  });
+}
+
+// シフトセルの表示を更新する関数
+function updateShiftCellsDisplay(dateStr, isRight) {
+  const containerId = isRight ? 'rightCalendar' : 'leftCalendar';
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  
+  // dateStrに一致するシフトセルを全て取得
+  const cells = container.querySelectorAll(`.shift-cell[data-date="${dateStr}"]`);
+  
+  // 各セルのデータと表示をクリア
+  cells.forEach(cell => {
+    cell.textContent = '';
+    cell.setAttribute('data-shift', '');
+    cell.setAttribute('data-pattern-id', '0');
+    // スタイルを更新
+    updateShiftCellStyle(cell);
+  });
+}
+
 
 // ページ読み込み時に全画面表示状態を適用
 function applyFullscreenState() {
@@ -209,10 +472,15 @@ applyFullscreenState();
     monthDisplay.textContent = formatDisplayMonth(currentYear, currentMonth);
   }
   
-  // データ取得関数を修正
+ 
+
+// データ取得関数の修正 - 削除された日付も取得
 function fetchData() {
-  // 最初に祝日データを取得してから他のデータを取得
-  fetchAndDisplayHolidays()
+  // 最初に祝日データと削除された日付データを取得
+  Promise.all([
+    fetchAndDisplayHolidays(),
+    fetchDeletedDates()
+  ])
     .then(() => {
       // 勤怠パターンを取得
       return fetch('/api/kintai_patterns');
@@ -283,34 +551,40 @@ function fetchData() {
 
   
   // 月セレクターの変更イベント
-  if (monthSelector) {
-    monthSelector.addEventListener('change', function() {
-      const selectedDate = monthSelector.value.split('-');
-      currentYear = parseInt(selectedDate[0]);
-      currentMonth = parseInt(selectedDate[1]);
+if (monthSelector) {
+  monthSelector.addEventListener('change', function() {
+    const selectedDate = monthSelector.value.split('-');
+    currentYear = parseInt(selectedDate[0]);
+    currentMonth = parseInt(selectedDate[1]);
+    monthDisplay.textContent = formatDisplayMonth(currentYear, currentMonth);
+    
+    // 削除状態をリセットしてから新しい月のデータを読み込む
+    deletedDates = {};
+    fetchData();
+  });
+}
+
+// 前月ボタン（同様に修正）
+const prevMonthBtn = document.getElementById('prevMonth');
+if (prevMonthBtn) {
+  prevMonthBtn.addEventListener('click', function() {
+    currentMonth--;
+    if (currentMonth < 1) {
+      currentMonth = 12;
+      currentYear--;
+    }
+    if (monthSelector) {
+      monthSelector.value = formatYearMonth(currentYear, currentMonth);
+    }
+    if (monthDisplay) {
       monthDisplay.textContent = formatDisplayMonth(currentYear, currentMonth);
-      fetchData();
-    });
-  }
-  
-  // 前月ボタン
-  const prevMonthBtn = document.getElementById('prevMonth');
-  if (prevMonthBtn) {
-    prevMonthBtn.addEventListener('click', function() {
-      currentMonth--;
-      if (currentMonth < 1) {
-        currentMonth = 12;
-        currentYear--;
-      }
-      if (monthSelector) {
-        monthSelector.value = formatYearMonth(currentYear, currentMonth);
-      }
-      if (monthDisplay) {
-        monthDisplay.textContent = formatDisplayMonth(currentYear, currentMonth);
-      }
-      fetchData();
-    });
-  }
+    }
+    
+    // 削除状態をリセットしてから新しい月のデータを読み込む
+    deletedDates = {};
+    fetchData();
+  });
+}
   
   // 次月ボタン
   const nextMonthBtn = document.getElementById('nextMonth');
@@ -1154,9 +1428,14 @@ setupShiftCellEvents(container);
         });
       });
     });
+
+    // 既存の削除状態の日付を反映
+  applyDeletedDatesHighlight(container);
     
     // 備考表示を更新
     updateMemoDisplay(isRight);
+    // 日付セルにイベントリスナーを追加 - この行が追加されているか確認
+setupDateCellListeners(container);
     
     console.log(`カレンダー生成完了: ${containerId}`);
   } catch (error) {
@@ -1164,6 +1443,21 @@ setupShiftCellEvents(container);
   }
 }
 
+// 既存の削除状態の日付をハイライト表示する関数
+function applyDeletedDatesHighlight(container) {
+  // deletedDatesオブジェクトからtrueの日付を取得
+  const deletedDatesList = Object.keys(deletedDates).filter(date => deletedDates[date]);
+  
+  // 各日付に対してハイライト処理
+  deletedDatesList.forEach(dateStr => {
+    container.querySelectorAll(`tr`).forEach(row => {
+      const cells = row.querySelectorAll(`[data-date="${dateStr}"]`);
+      if (cells.length > 0) {
+        row.classList.add('deleted-date-row');
+      }
+    });
+  });
+}
 
       
 // テーブルレスポンシブクラスを適用する関数

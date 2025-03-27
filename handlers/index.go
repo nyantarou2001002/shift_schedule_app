@@ -1,12 +1,15 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"shift_schedule_app/db"
 	"shift_schedule_app/models"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -576,5 +579,217 @@ func MarkShiftAsRightDeletedHandler(w http.ResponseWriter, r *http.Request) {
 		"success": true,
 		"id":      shiftID,
 		"message": "Shift marked as right_deleted successfully",
+	})
+}
+
+// DeletedDatesHandler は日付の削除状態を取得するハンドラです
+func DeletedDatesHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// クエリパラメータから年月を取得
+	yearMonth := r.URL.Query().Get("yearMonth")
+	if yearMonth == "" {
+		http.Error(w, "yearMonth parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	// 指定された年月の最初と最後の日を計算
+	parts := strings.Split(yearMonth, "-")
+	if len(parts) != 2 {
+		http.Error(w, "Invalid yearMonth format", http.StatusBadRequest)
+		return
+	}
+
+	year, _ := strconv.Atoi(parts[0])
+	month, _ := strconv.Atoi(parts[1])
+	firstDate := fmt.Sprintf("%d-%02d-01", year, month)
+
+	// 月の末日を計算
+	var lastDay int
+	if month == 2 {
+		if year%4 == 0 && (year%100 != 0 || year%400 == 0) {
+			lastDay = 29 // うるう年
+		} else {
+			lastDay = 28
+		}
+	} else if month == 4 || month == 6 || month == 9 || month == 11 {
+		lastDay = 30
+	} else {
+		lastDay = 31
+	}
+	lastDate := fmt.Sprintf("%d-%02d-%02d", year, month, lastDay)
+
+	// 該当月の削除された日付を取得
+	rows, err := db.DB.Query(
+		"SELECT date FROM deleted_dates WHERE date BETWEEN ? AND ? AND is_deleted = TRUE",
+		firstDate, lastDate)
+	if err != nil {
+		log.Printf("Error querying deleted dates: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var deletedDates []string
+	for rows.Next() {
+		var date string
+		if err := rows.Scan(&date); err != nil {
+			log.Printf("Error scanning deleted date: %v", err)
+			continue
+		}
+		deletedDates = append(deletedDates, date)
+	}
+
+	// JSONで返す
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(deletedDates)
+}
+
+// ToggleDateDeletionHandler は日付の削除状態を切り替えるハンドラです
+func ToggleDateDeletionHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// リクエストボディをデコード
+	var request struct {
+		Date      string `json:"date"`
+		IsDeleted bool   `json:"is_deleted"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// 削除状態を更新/挿入
+	var result sql.Result
+	var err error
+
+	if request.IsDeleted {
+		// 日付を削除状態に設定 - MySQLのREPLACE構文を使用
+		result, err = db.DB.Exec(
+			"REPLACE INTO deleted_dates (date, is_deleted) VALUES (?, TRUE)",
+			request.Date)
+	} else {
+		// 削除状態を解除
+		result, err = db.DB.Exec(
+			"UPDATE deleted_dates SET is_deleted = FALSE WHERE date = ?",
+			request.Date)
+	}
+
+	if err != nil {
+		log.Printf("Error updating deleted date status: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// 影響を受けた行数を取得
+	rowsAffected, _ := result.RowsAffected()
+
+	// 成功レスポンス
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success":       true,
+		"date":          request.Date,
+		"is_deleted":    request.IsDeleted,
+		"rows_affected": rowsAffected,
+	})
+}
+
+// DeleteDateShiftsHandler と DeleteDateShiftsSimulationHandler の実装も追加
+func DeleteDateShiftsHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// リクエストボディからデータをデコード
+	var request struct {
+		Date string `json:"date"`
+	}
+
+	err := json.NewDecoder(r.Body).Decode(&request)
+	if err != nil {
+		log.Printf("Error decoding request body: %v", err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	log.Printf("Deleting all shifts for date: %s", request.Date)
+
+	// 指定された日付の全シフトを削除
+	result, err := db.DB.Exec("DELETE FROM shifts WHERE date = ?", request.Date)
+	if err != nil {
+		log.Printf("Error deleting shifts: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+	log.Printf("Deleted %d shifts for date %s", rowsAffected, request.Date)
+
+	// 成功レスポンスを返す
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success":      true,
+		"rowsAffected": rowsAffected,
+		"message":      "All shifts deleted successfully for the specified date",
+		"date":         request.Date,
+	})
+}
+
+func DeleteDateShiftsSimulationHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// リクエストボディからデータをデコード
+	var request struct {
+		Date string `json:"date"`
+	}
+
+	err := json.NewDecoder(r.Body).Decode(&request)
+	if err != nil {
+		log.Printf("Error decoding request body: %v", err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	log.Printf("Deleting all simulation shifts for date: %s", request.Date)
+
+	// 指定された日付の全シミュレーションシフトを削除
+	result, err := db.DB.Exec("DELETE FROM shifts_simulation WHERE date = ?", request.Date)
+	if err != nil {
+		log.Printf("Error deleting simulation shifts: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// 右側削除フラグも設定
+	flagResult, err := db.DB.Exec("UPDATE shifts SET right_deleted = TRUE WHERE date = ?", request.Date)
+	if err != nil {
+		log.Printf("Error setting right_deleted flag: %v", err)
+		// エラーは返さず続行
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+	flagRowsAffected, _ := flagResult.RowsAffected()
+	log.Printf("Deleted %d simulation shifts and marked %d shifts as right_deleted for date %s",
+		rowsAffected, flagRowsAffected, request.Date)
+
+	// 成功レスポンスを返す
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success":      true,
+		"rowsAffected": rowsAffected,
+		"flagged":      flagRowsAffected,
+		"message":      "All simulation shifts deleted successfully for the specified date",
+		"date":         request.Date,
 	})
 }

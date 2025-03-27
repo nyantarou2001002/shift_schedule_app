@@ -42,6 +42,14 @@ func main() {
 	http.HandleFunc("/api/memos", handlers.GetMemos)
 	http.HandleFunc("/api/saveNoteMemo", handlers.SaveMemo)
 
+	// 既存のハンドラ登録に追加
+	http.HandleFunc("/api/deleteDateShifts", handlers.DeleteDateShiftsHandler)
+	http.HandleFunc("/api/deleteDateShiftsSimulation", handlers.DeleteDateShiftsSimulationHandler)
+
+	// 既存のハンドラ登録に追加
+	http.HandleFunc("/api/deletedDates", handlers.DeletedDatesHandler)
+	http.HandleFunc("/api/toggleDateDeletion", handlers.ToggleDateDeletionHandler)
+
 	// 静的ファイルサーバー
 	http.Handle("/", http.FileServer(http.Dir("./static")))
 
