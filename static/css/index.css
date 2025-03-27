@@ -482,3 +482,25 @@ tr.time-night .note-cell {
   width: 100%;
   min-width: 100%;
 }
+
+/* 全画面表示時のカレンダーコンテナ - 横スクロールのみ */
+#rightContentCol.col-md-12 .calendar-container {
+  overflow-y: hidden !important; /* 縦スクロールバーを非表示 */
+  max-height: none !important; /* 高さ制限を解除 */
+  overflow-x: auto !important; /* 横スクロールバーを表示 */
+}
+
+/* 全画面表示時のテーブル高さ調整 */
+#rightContentCol.col-md-12 .table {
+  margin-bottom: 0 !important;
+}
+
+/* テーブルセルの高さを固定 */
+.horizontal-calendar tr {
+  height: 45px; /* 行の高さを固定 */
+}
+
+/* オーバーフロー時の内容を表示 */
+.horizontal-calendar td {
+  overflow: visible;
+}

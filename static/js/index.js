@@ -101,6 +101,14 @@ if (fullscreenBtn) {
       const calendarContainer = rightContentCol.querySelector('.calendar-container');
       if (calendarContainer) {
         calendarContainer.classList.add('w-100');
+        
+        // Bootstrapのスクロールクラスを調整
+        calendarContainer.classList.remove('overflow-auto');
+        calendarContainer.classList.add('overflow-hidden'); // 縦スクロール非表示
+        
+        // スタイルの直接操作
+        calendarContainer.style.overflowY = 'hidden';
+        calendarContainer.style.maxHeight = 'none';
       }
     } else {
       // 通常モード - Bootstrap のグリッドシステムに戻す
@@ -124,6 +132,14 @@ if (fullscreenBtn) {
       const calendarContainer = rightContentCol.querySelector('.calendar-container');
       if (calendarContainer) {
         calendarContainer.classList.remove('w-100');
+        
+        // Bootstrapのスクロールクラスを元に戻す
+        calendarContainer.classList.remove('overflow-hidden');
+        calendarContainer.classList.add('overflow-auto');
+        
+        // スタイルの直接操作をリセット
+        calendarContainer.style.overflowY = '';
+        calendarContainer.style.maxHeight = '';
       }
     }
     
