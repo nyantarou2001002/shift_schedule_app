@@ -11,6 +11,9 @@ let holidaysData = {};
 let leftMemosData = {};  // 左側カレンダー用
 let rightMemosData = {}; // 右側カレンダー用
 
+// 全画面表示の状態を保存/読み込みする機能
+let isFullscreen = localStorage.getItem('calendarFullscreen') === 'true';
+
 // 祝日データを取得して表示する関数
 function fetchAndDisplayHolidays() {
   return fetch('https://holidays-jp.github.io/api/v1/date.json')
@@ -66,18 +69,56 @@ function fetchAndDisplayHolidays() {
   const monthSelector = document.getElementById('monthSelector');
   const monthDisplay = document.getElementById('currentMonthDisplay');
 
-// 全画面表示ボタンの機能を追加（Bootstrap クラスを活用）
+// 全画面表示ボタンの参照
 const fullscreenBtn = document.getElementById('fullscreenBtn');
 const fullscreenBtnText = document.getElementById('fullscreenBtnText');
 const leftContentCol = document.getElementById('leftContentCol');
 const rightContentCol = document.getElementById('rightContentCol');
 
-let isFullscreen = false;
+
+// ページ読み込み時に全画面表示状態を適用
+function applyFullscreenState() {
+  if (isFullscreen) {
+    // 全画面モード - Bootstrap のグリッドシステムを活用
+    leftContentCol.classList.add('d-none');
+    rightContentCol.classList.remove('col-md-6');
+    rightContentCol.classList.add('col-md-12');
+    fullscreenBtnText.textContent = '両方表示';
+    
+    // ボタンスタイルを変更
+    fullscreenBtn.classList.remove('btn-outline-success');
+    fullscreenBtn.classList.add('btn-success');
+    
+    // コンテナをfluidに変更
+    const rightContainer = rightContentCol.querySelector('.container');
+    if (rightContainer) {
+      rightContainer.classList.remove('container');
+      rightContainer.classList.add('container-fluid', 'px-3');
+    }
+    
+    // カレンダーコンテナを横幅最大に
+    const calendarContainer = rightContentCol.querySelector('.calendar-container');
+    if (calendarContainer) {
+      calendarContainer.classList.add('w-100');
+      
+      // Bootstrapのスクロールクラスを調整
+      calendarContainer.classList.remove('overflow-auto');
+      calendarContainer.classList.add('overflow-hidden'); // 縦スクロール非表示
+      
+      // スタイルの直接操作
+      calendarContainer.style.overflowY = 'hidden';
+      calendarContainer.style.maxHeight = 'none';
+    }
+  }
+}
 
 // 全画面表示ボタンの機能を追加（Bootstrap クラスを活用）
 if (fullscreenBtn) {
   fullscreenBtn.addEventListener('click', function() {
     isFullscreen = !isFullscreen;
+    
+    // 状態をローカルストレージに保存
+    localStorage.setItem('calendarFullscreen', isFullscreen);
     
     if (isFullscreen) {
       // 全画面モード - Bootstrap のグリッドシステムを活用
@@ -127,7 +168,7 @@ if (fullscreenBtn) {
         rightContainer.classList.remove('container-fluid', 'px-3');
         rightContainer.classList.add('container');
       }
-      
+
       // カレンダーコンテナを元に戻す
       const calendarContainer = rightContentCol.querySelector('.calendar-container');
       if (calendarContainer) {
@@ -149,6 +190,9 @@ if (fullscreenBtn) {
     }, 300);
   });
 }
+
+// ページ読み込み時にローカルストレージから状態を適用
+applyFullscreenState();
   
   // YYYY-MM形式に変換
   function formatYearMonth(year, month) {
