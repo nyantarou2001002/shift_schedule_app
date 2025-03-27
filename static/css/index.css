@@ -318,11 +318,12 @@ tr.time-night .right-time-label {
   vertical-align: middle;
 }
 
-
-/* 備考セルのスタイル強化 */
+/* 備考セルのスタイルを修正 - 幅を広げる */
 .note-cell {
   background-color: #f9f9f9;
-  width: 100px;
+  width: 180px !important;  /* 幅を180pxに拡大 */
+  min-width: 180px !important; /* 最小幅を保証 */
+  max-width: 250px !important; /* 最大幅を設定 */
   border-left: 1px solid #dee2e6;
   border-right: 1px solid #dee2e6;
   vertical-align: middle;
@@ -331,13 +332,13 @@ tr.time-night .right-time-label {
   text-overflow: ellipsis;
   white-space: pre-wrap;
   max-height: 80px;
-  padding: 5px;
+  padding: 5px 8px; /* 左右のパディングを少し広げる */
   cursor: pointer;
 }
 
-/* 備考入力エリアのスタイル */
+/* 備考入力エリアのスタイルも修正 */
 .note-textarea {
-  padding: 4px;
+  padding: 6px 8px; /* パディングを広げる */
   font-size: 0.85rem;
   border: none;
   resize: none;
@@ -345,6 +346,7 @@ tr.time-night .right-time-label {
   box-sizing: border-box;
   background-color: #fff8e1;
   transition: background-color 0.2s;
+  min-height: 60px; /* 最小高さを設定 */
 }
 
 .note-textarea:focus {
