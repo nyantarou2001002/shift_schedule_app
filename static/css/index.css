@@ -364,3 +364,121 @@ tr.time-day .note-cell {
 tr.time-night .note-cell {
   background-color: rgba(230, 240, 255, 0.3);
 }
+
+/* 全画面表示ボタンのスタイル */
+#fullscreenBtn {
+  transition: all 0.3s ease;
+  width: 160px;
+}
+
+#fullscreenBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+/* 全画面表示時のアニメーション - 強化版 */
+.col-fullscreen {
+  transition: width 0.3s ease, flex 0.3s ease, max-width 0.3s ease;
+  padding-left: 5px !important;
+  padding-right: 5px !important;
+}
+
+/* 全画面モード時のスタイル - 強化版 */
+#rightContentCol.col-fullscreen {
+  width: 100% !important;
+  flex: 0 0 100% !important;
+  max-width: 100% !important;
+  padding: 20px !important;
+}
+
+/* 全画面モード時のコンテナスタイル - 強化版 */
+#rightContentCol.col-fullscreen .container {
+  max-width: 100% !important;
+  width: 100% !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+/* 全画面モード時のカレンダーコンテナ - スクロールバーなし */
+#rightContentCol.col-fullscreen .calendar-container {
+  max-width: 100% !important;
+  overflow-x: visible !important; /* スクロールバーなし */
+  overflow-y: visible !important; /* 縦スクロールバーも非表示 */
+}
+
+/* 全画面モード時のテーブル - 固定幅なし */
+#rightContentCol.col-fullscreen .table {
+  width: 100% !important;
+  max-width: none !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  table-layout: fixed !important; /* 列幅を均等に */
+}
+
+/* 全画面モード時の各列の幅を自動調整 */
+#rightContentCol.col-fullscreen .table th,
+#rightContentCol.col-fullscreen .table td {
+  white-space: normal !important;
+}
+
+/* 全画面モード時のカレンダー本体 - 追加 */
+#rightContentCol.col-fullscreen #rightCalendar {
+  width: 100% !important;
+}
+/* 左側コンテンツ非表示時のスタイル */
+#leftContentCol.d-none {
+  display: none !important;
+}
+
+/* すでにある設定を修正 */
+.calendar-container {
+  width: 100%;
+  overflow-x: auto !important; /* 強制的に横スクロールを有効に */
+  overflow-y: auto;
+  max-height: 70vh;
+  position: relative;
+}
+
+/* 従業員ヘッダーの幅を固定 */
+.employee-header {
+  min-width: 80px !important;
+  white-space: nowrap !important;
+}
+
+/* 全画面表示時のカレンダーコンテナ - スクロールバーあり */
+#rightContentCol.col-fullscreen .calendar-container {
+  max-width: 100% !important;
+  overflow-x: auto !important; /* 横スクロールバーを表示 */
+  overflow-y: auto !important; /* 縦スクロールバーも表示 */
+  max-height: 80vh !important; /* 高さを少し大きく */
+  padding-bottom: 15px; /* スクロールバー用の余白 */
+}
+
+/* テーブルの横スクロール対応 */
+.table-responsive {
+  min-width: 100%;
+}
+
+/* テーブルレイアウトを調整 */
+.horizontal-calendar {
+  width: auto !important; /* 固定幅ではなく内容に合わせる */
+  min-width: 100%; /* 最低でも親要素の幅 */
+}
+
+/* 全画面表示時のアニメーション */
+.transition-width {
+  transition: width 0.3s ease, flex 0.3s ease, max-width 0.3s ease;
+}
+
+/* カレンダーコンテナのスクロール設定 */
+.calendar-container {
+  overflow-x: auto;
+}
+
+/* 全画面表示時のテーブル調整 */
+#rightContentCol.col-md-12 .table {
+  width: 100%;
+  min-width: 100%;
+}

@@ -36,71 +36,80 @@
     </div>
   </nav>
   
-  <!-- 月選択セクション -->
-  <div class="container-fluid month-selector">
-    <div class="container">
-      <div class="row align-items-center">
-        <div class="col-md-4">
-          <div class="input-group">
-            <div class="input-group-prepend">
-              <span class="input-group-text">表示月</span>
-            </div>
-            <input type="month" class="form-control" id="monthSelector" />
-            <div class="input-group-append">
-              <button class="btn btn-outline-secondary" type="button" id="showCurrentMonth">今月</button>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-4 text-center">
-          <div class="btn-group" role="group">
-            <button type="button" class="btn btn-outline-primary" id="prevMonth">&lt; 前月</button>
-            <button type="button" class="btn btn-outline-primary" id="nextMonth">次月 &gt;</button>
-          </div>
-        </div>
-        <div class="col-md-4 text-right">
-          <span class="month-display" id="currentMonthDisplay">2025年3月</span>
-        </div>
-      </div>
-    </div>
-  </div>
   
-  <!-- メインコンテンツ -->
-  <div class="container-fluid d-flex flex-column content-container">
-    <div class="row flex-grow-1">
-      <!-- 左側のコンテンツ - シフト表カレンダー -->
-      <div class="col-md-6 divider-right py-4">
-        <div class="container">
-          <div class="calendar mb-4">
-            <div class="calendar-header">
-              <h5 class="mb-0">シフト表カレンダー(希望)</h5>
-            </div>
-            <!-- カレンダーをスクロール可能なコンテナで囲む -->
-            <div class="calendar-container">
-              <div id="leftCalendar">
-                <!-- カレンダーはJSで動的に生成 -->
-              </div>
+  <!-- 月選択セクションの修正 - 全画面ボタンを追加 -->
+<div class="container-fluid month-selector">
+  <div class="container">
+    <div class="row align-items-center">
+      <div class="col-md-3">
+        <div class="input-group">
+          <div class="input-group-prepend">
+            <span class="input-group-text">表示月</span>
+          </div>
+          <input type="month" class="form-control" id="monthSelector" />
+          <div class="input-group-append">
+            <button class="btn btn-outline-secondary" type="button" id="showCurrentMonth">今月</button>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3 text-center">
+        <div class="btn-group" role="group">
+          <button type="button" class="btn btn-outline-primary" id="prevMonth">&lt; 前月</button>
+          <button type="button" class="btn btn-outline-primary" id="nextMonth">次月 &gt;</button>
+        </div>
+      </div>
+      <div class="col-md-3 text-center">
+        <!-- 全画面表示ボタンを追加 -->
+        <button type="button" class="btn btn-outline-success" id="fullscreenBtn">
+          <span id="fullscreenBtnText">右側のみ表示</span>
+        </button>
+      </div>
+      <div class="col-md-3 text-right">
+        <span class="month-display" id="currentMonthDisplay">2025年3月</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- メインコンテンツ部分を Bootstrap クラスで強化 -->
+<div class="container-fluid d-flex flex-column content-container">
+  <div class="row flex-grow-1">
+    <!-- 左側のコンテンツ - シフト表カレンダー -->
+    <div class="col-md-6 divider-right py-4 transition-width" id="leftContentCol">
+      <div class="container">
+        <div class="calendar mb-4">
+          <div class="calendar-header">
+            <h5 class="mb-0">シフト表カレンダー(希望)</h5>
+          </div>
+          <!-- Bootstrap のテーブルレスポンシブクラスを追加 -->
+          <div class="calendar-container table-responsive">
+            <div id="leftCalendar">
+              <!-- カレンダーはJSで動的に生成 -->
             </div>
           </div>
         </div>
       </div>
-      <!-- 右側のコンテンツ - 個人カレンダー -->
-      <div class="col-md-6 py-4">
-        <div class="container">
-          <div class="calendar mb-4">
-            <div class="calendar-header">
-              <h5 class="mb-0">シフト表カレンダー</h5>
-            </div>
-            <!-- 右側も同様にスクロール可能なコンテナで囲む -->
-            <div class="calendar-container">
-              <div id="rightCalendar">
-                <!-- カレンダーはJSで動的に生成 -->
-              </div>
+    </div>
+    <!-- 右側のコンテンツ - シフト表カレンダー -->
+    <div class="col-md-6 py-4 transition-width" id="rightContentCol">
+      <div class="container">
+        <div class="calendar mb-4">
+          <div class="calendar-header">
+            <h5 class="mb-0">シフト表カレンダー</h5>
+          </div>
+          <!-- Bootstrap のテーブルレスポンシブクラスを追加 -->
+          <div class="calendar-container table-responsive">
+            <div id="rightCalendar">
+              <!-- カレンダーはJSで動的に生成 -->
             </div>
           </div>
         </div>
       </div>
     </div>
   </div>
+</div>
+  </div>
+</div>
 
   <!-- 勤怠パターン選択用モーダル部分を修正 -->
   <div class="modal fade" id="patternSelectModal" tabindex="-1" role="dialog" aria-labelledby="patternSelectModalLabel" aria-hidden="true">

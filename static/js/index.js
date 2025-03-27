@@ -65,6 +65,74 @@ function fetchAndDisplayHolidays() {
   // 月選択の初期化
   const monthSelector = document.getElementById('monthSelector');
   const monthDisplay = document.getElementById('currentMonthDisplay');
+
+// 全画面表示ボタンの機能を追加（Bootstrap クラスを活用）
+const fullscreenBtn = document.getElementById('fullscreenBtn');
+const fullscreenBtnText = document.getElementById('fullscreenBtnText');
+const leftContentCol = document.getElementById('leftContentCol');
+const rightContentCol = document.getElementById('rightContentCol');
+
+let isFullscreen = false;
+
+// 全画面表示ボタンの機能を追加（Bootstrap クラスを活用）
+if (fullscreenBtn) {
+  fullscreenBtn.addEventListener('click', function() {
+    isFullscreen = !isFullscreen;
+    
+    if (isFullscreen) {
+      // 全画面モード - Bootstrap のグリッドシステムを活用
+      leftContentCol.classList.add('d-none');
+      rightContentCol.classList.remove('col-md-6');
+      rightContentCol.classList.add('col-md-12');
+      fullscreenBtnText.textContent = '両方表示';
+      
+      // ボタンスタイルを変更
+      fullscreenBtn.classList.remove('btn-outline-success');
+      fullscreenBtn.classList.add('btn-success');
+      
+      // コンテナをfluidに変更
+      const rightContainer = rightContentCol.querySelector('.container');
+      if (rightContainer) {
+        rightContainer.classList.remove('container');
+        rightContainer.classList.add('container-fluid', 'px-3');
+      }
+      
+      // カレンダーコンテナを横幅最大に
+      const calendarContainer = rightContentCol.querySelector('.calendar-container');
+      if (calendarContainer) {
+        calendarContainer.classList.add('w-100');
+      }
+    } else {
+      // 通常モード - Bootstrap のグリッドシステムに戻す
+      leftContentCol.classList.remove('d-none');
+      rightContentCol.classList.remove('col-md-12');
+      rightContentCol.classList.add('col-md-6');
+      fullscreenBtnText.textContent = '右側のみ表示';
+      
+      // ボタンスタイルを元に戻す
+      fullscreenBtn.classList.remove('btn-success');
+      fullscreenBtn.classList.add('btn-outline-success');
+      
+      // コンテナを通常に戻す
+      const rightContainer = rightContentCol.querySelector('.container-fluid');
+      if (rightContainer) {
+        rightContainer.classList.remove('container-fluid', 'px-3');
+        rightContainer.classList.add('container');
+      }
+      
+      // カレンダーコンテナを元に戻す
+      const calendarContainer = rightContentCol.querySelector('.calendar-container');
+      if (calendarContainer) {
+        calendarContainer.classList.remove('w-100');
+      }
+    }
+    
+    // カレンダー再描画（レイアウト調整のため）
+    setTimeout(() => {
+      updateCalendars();
+    }, 300);
+  });
+}
   
   // YYYY-MM形式に変換
   function formatYearMonth(year, month) {
@@ -701,8 +769,16 @@ async function generateCalendar(year, month, containerId) {
     // 曜日の名前配列
     const weekDays = ['日', '月', '火', '水', '木', '金', '土'];
     
-    // HTML生成開始
-    let calendarHTML = '<table class="table table-bordered horizontal-calendar">';
+    // HTML生成開始 - テーブルクラスを動的に設定
+let tableClass = 'table table-bordered table-sm horizontal-calendar';
+// 全画面表示時は右側のテーブルに w-100 クラスを追加
+if (isRight && isFullscreen) {
+  tableClass += ' w-100';
+}
+let calendarHTML = `<table class="${tableClass}">`;
+
+// HTMLを挿入
+container.innerHTML = calendarHTML;
     
     // ヘッダー行（日付の列とその右に従業員名）
     calendarHTML += '<thead><tr><th rowspan="2">日付</th><th rowspan="2">時間帯</th>';
@@ -830,6 +906,24 @@ async function generateCalendar(year, month, containerId) {
     
     // HTMLを挿入
     container.innerHTML = calendarHTML;
+
+    // 全画面表示時にテーブル幅を調整 - より強力な調整
+if (isRight && isFullscreen) {
+  const table = container.querySelector('table');
+  if (table) {
+    table.style.width = '100%';
+    table.style.maxWidth = 'none';
+    
+    // テーブルの親要素も幅を調整
+    container.style.width = '100%';
+    
+    // container の親要素も調整
+    const calendarContainer = container.closest('.calendar-container');
+    if (calendarContainer) {
+      calendarContainer.style.maxWidth = '100%';
+    }
+  }
+}
     
     // イベントリスナーの追加
     const shiftCells = container.querySelectorAll('.shift-cell');
@@ -966,15 +1060,37 @@ async function generateCalendar(year, month, containerId) {
   }
 }
 
-    
+
       
-  
-  // 両方のカレンダーを更新する関数
-function updateCalendars() {
+// テーブルレスポンシブクラスを適用する関数
+function applyResponsiveTable() {
+  const containers = document.querySelectorAll('.calendar-container');
+  containers.forEach(container => {
+    if (!container.classList.contains('table-responsive')) {
+      container.classList.add('table-responsive');
+    }
+    
+    // 全画面表示時は右側のカレンダーテーブルを幅いっぱいに
+    if (isFullscreen) {
+      const rightContainer = document.getElementById('rightContentCol');
+      if (rightContainer && rightContainer.contains(container)) {
+        const table = container.querySelector('table');
+        if (table) {
+          table.classList.add('w-100');
+        }
+      }
+    }
+  });
+}
+
+// 両方のカレンダーを更新する関数
+async function updateCalendars() {
   console.log(`カレンダー更新: ${currentYear}年${currentMonth}月`);
-  // カレンダー生成後に強制的に日曜日と祝日の色を設定する
-  generateCalendar(currentYear, currentMonth, 'leftCalendar')
-  .then(() => {
+  
+  try {
+    // 左側カレンダー生成
+    await generateCalendar(currentYear, currentMonth, 'leftCalendar');
+    
     // 左カレンダーの日曜日と祝日を赤く
     const leftContainer = document.getElementById('leftCalendar');
     if (leftContainer) {
@@ -1001,9 +1117,9 @@ function updateCalendars() {
       });
     }
     
-    return generateCalendar(currentYear, currentMonth, 'rightCalendar');
-  })
-  .then(() => {
+    // 右側カレンダー生成
+    await generateCalendar(currentYear, currentMonth, 'rightCalendar');
+    
     // 右カレンダーの日曜日と祝日を赤く
     const rightContainer = document.getElementById('rightCalendar');
     if (rightContainer) {
@@ -1029,7 +1145,13 @@ function updateCalendars() {
         span.style.display = 'block';
       });
     }
-  });
+    
+    // レスポンシブテーブルクラスを適用
+    applyResponsiveTable();
+    
+  } catch (error) {
+    console.error('カレンダー更新エラー:', error);
+  }
 }
 
   
