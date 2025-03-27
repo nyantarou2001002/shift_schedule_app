@@ -12,6 +12,9 @@ func main() {
 	// DB の初期化
 	db.InitDB()
 
+	// 祝日データのキャッシュを初期化
+	handlers.InitHolidayCache()
+
 	// ハンドラーの登録
 	http.HandleFunc("/api/employees", handlers.EmployeesHandler)
 	http.HandleFunc("/api/addEmployee", handlers.AddEmployeeHandler)
@@ -49,6 +52,9 @@ func main() {
 	// 既存のハンドラ登録に追加
 	http.HandleFunc("/api/deletedDates", handlers.DeletedDatesHandler)
 	http.HandleFunc("/api/toggleDateDeletion", handlers.ToggleDateDeletionHandler)
+
+	// 既存のハンドラ登録に追加（deletedDatesなどの登録の後に追加）
+	http.HandleFunc("/api/exportShiftExcel", handlers.ExportShiftExcelHandler)
 
 	// 静的ファイルサーバー
 	http.Handle("/", http.FileServer(http.Dir("./static")))

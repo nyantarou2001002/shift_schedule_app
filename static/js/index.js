@@ -1694,5 +1694,80 @@ async function updateCalendars() {
     });
   }
 
+  // エクセル出力ボタンのイベントリスナーを設定
+  const exportExcelBtn = document.getElementById('exportExcelBtn');
+  if (exportExcelBtn) {
+    exportExcelBtn.addEventListener('click', function() {
+      exportShiftToExcel();
+    });
+  }
+
+  // エクセル出力機能
+  function exportShiftToExcel() {
+    // 処理開始の通知
+    console.log('シフト表をエクセルに出力します...');
+    
+    try {
+      // 現在表示中の年月を取得
+      const yearMonth = formatYearMonth(currentYear, currentMonth);
+      
+      // ボタンの状態を「処理中」に変更
+      const exportBtn = document.getElementById('exportExcelBtn');
+      const originalText = exportBtn.innerHTML;
+      exportBtn.disabled = true;
+      exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 処理中...';
+      
+      // FormデータでPOSTリクエスト
+      fetch(`/api/exportShiftExcel?yearMonth=${yearMonth}`, {
+        method: 'POST'
+      })
+      .then(response => {
+        // ボタンを元に戻す
+        exportBtn.innerHTML = originalText;
+        exportBtn.disabled = false;
+        
+        if (!response.ok) {
+          // エラーレスポンスの場合
+          return response.text().then(text => {
+            throw new Error(`エクスポートエラー (${response.status}): ${text}`);
+          });
+        }
+        
+        // ブラウザのダウンロード処理を開始
+        return response.blob();
+      })
+      .then(blob => {
+        // ダウンロード用リンクを作成
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = `シフト表_${currentYear}年${currentMonth}月.xlsx`;
+        
+        // リンクをクリックしてダウンロード
+        document.body.appendChild(a);
+        a.click();
+        
+        // クリーンアップ
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        console.log('エクセル出力完了:', a.download);
+      })
+      .catch(error => {
+        // エラー処理
+        console.error('エクセル出力エラー:', error);
+        alert('エクセル出力中にエラーが発生しました: ' + error.message);
+        
+        // ボタンを元に戻す
+        exportBtn.innerHTML = originalText;
+        exportBtn.disabled = false;
+      });
+    } catch (error) {
+      console.error('エクセル出力準備エラー:', error);
+      alert('エクセル出力の準備中にエラーが発生しました: ' + error.message);
+    }
+  }
+
   
 });

@@ -7,6 +7,8 @@
   <title>シフト表作成アプリ</title>
   <!-- Bootstrap CSS -->
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
   <!-- 自作CSSファイルの読み込み -->
   <link rel="stylesheet" href="css/index.css">
 </head>
@@ -92,10 +94,14 @@
 <div class="col-md-6 py-4 transition-width" id="rightContentCol">
   <div class="container">
     <div class="calendar mb-4">
-      <div class="calendar-header">
+      <div class="calendar-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">シフト表カレンダー</h5>
+        <!-- エクセル出力ボタンを追加 -->
+        <button type="button" class="btn btn-success btn-sm" id="exportExcelBtn">
+          <i class="fas fa-file-excel mr-1"></i>エクセル出力
+        </button>
       </div>
-      <!-- 横スクロールのみのクラスに変更 -->
+      <!-- 既存のカレンダーコンテナ -->
       <div class="calendar-container table-responsive-md overflow-x-auto overflow-y-hidden" id="rightCalendarContainer" style="max-height:none; padding-bottom:15px;">
         <div id="rightCalendar">
           <!-- カレンダーはJSで動的に生成 -->

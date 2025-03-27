@@ -593,3 +593,29 @@ tr.time-night .note-cell {
 .date-cell {
   cursor: pointer !important;
 }
+
+/* エクセル出力ボタンのスタイル */
+#exportExcelBtn {
+  transition: all 0.2s ease;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+#exportExcelBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+#exportExcelBtn:active {
+  transform: translateY(0);
+}
+
+/* カレンダーヘッダーのスタイル調整 */
+.calendar-header {
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
