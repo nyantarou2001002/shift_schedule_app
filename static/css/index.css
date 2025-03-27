@@ -523,3 +523,44 @@ tr.time-night .note-cell {
 .overflow-x-auto {
   overflow-x: auto !important;
 }
+
+/* 区分線用のスタイル - Bootstrap互換 */
+.divider-column {
+  width: 1px !important;
+  max-width: 1px !important;
+  min-width: 1px !important;
+  padding: 0 !important;
+  border-left: 1px solid #dee2e6 !important;
+  border-right: 1px solid #dee2e6 !important;
+  background-color: #f8f9fa !important;
+  overflow: hidden !important;
+  position: relative !important;
+}
+
+/* 区分線ヘッダー - Bootstrap互換 */
+.divider-column-header {
+  width: 1px !important;
+  max-width: 1px !important;
+  min-width: 1px !important;
+  padding: 0 !important;
+  background-color: #e9ecef !important;
+  border-left: 1px solid #dee2e6 !important;
+  border-right: 1px solid #dee2e6 !important;
+  overflow: hidden !important;
+  text-indent: -9999px !important;
+  position: relative !important;
+}
+
+/* 区分線セル内のシフトセル - Bootstrap互換 */
+.divider-column .shift-cell {
+  display: none !important;
+}
+
+/* BS4互換の色でリスト化 */
+.divider-border {
+  border-color: #dee2e6 !important;
+}
+
+.divider-bg {
+  background-color: #f8f9fa !important;
+}

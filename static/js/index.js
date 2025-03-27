@@ -839,13 +839,18 @@ let calendarHTML = `<table class="${tableClass}">`;
 // HTMLを挿入
 container.innerHTML = calendarHTML;
     
-    // ヘッダー行（日付の列とその右に従業員名）
-    calendarHTML += '<thead><tr><th rowspan="2">日付</th><th rowspan="2">時間帯</th>';
-    
-    // 従業員名のヘッダー
-    employees.forEach(employee => {
-      calendarHTML += `<th class="employee-header">${employee.name}</th>`;
-    });
+    // generateCalendar 関数内のヘッダー部分を修正
+calendarHTML += '<thead><tr class="bg-light"><th class="align-middle" rowspan="2">日付</th><th class="align-middle" rowspan="2">時間帯</th>';
+
+// 従業員名のヘッダー
+employees.forEach(employee => {
+  if (employee.name === "black_bar") {
+    // Bootstrapクラスを活用
+    calendarHTML += `<th class="divider-column-header p-0 border-left border-right border-secondary">区分線</th>`;
+  } else {
+    calendarHTML += `<th class="employee-header text-nowrap">${employee.name}</th>`;
+  }
+});
     
     // 右端に備考と日付と時間帯のヘッダーを追加
     calendarHTML += '<th rowspan="2">備考</th><th rowspan="2">日付</th><th rowspan="2">時間帯</th></tr>';
@@ -897,16 +902,25 @@ container.innerHTML = calendarHTML;
         </td>
         <td class="shift-time-label">朝</td>`;
       
-      // 各従業員のシフトセル（朝）
-      employees.forEach(employee => {
-        const shiftInfo = getShiftInfo(employee.id, dateStr, 'morning', isRight);
-        const patternId = shiftInfo ? shiftInfo.kintai_pattern_id : 0;
-        const patternName = getPatternName(patternId);
-        
-        calendarHTML += `<td data-employee-id="${employee.id}" data-date="${dateStr}" data-shift-time="morning">
-          <div class="shift-cell" data-shift="${patternName}" data-pattern-id="${patternId}" data-side="${isRight ? 'right' : 'left'}" data-employee="${employee.id}" data-date="${dateStr}" data-shift-time="morning">${patternName}</div>
-        </td>`;
-      });
+      // 各セル生成部分も修正 (朝)
+employees.forEach(employee => {
+  if (employee.name === "black_bar") {
+    // Bootstrapクラスを活用した区分線セル
+    calendarHTML += `<td class="divider-column p-0 border-left border-right border-secondary" 
+      data-employee-id="${employee.id}" data-date="${dateStr}" data-shift-time="morning"></td>`;
+  } else {
+    const shiftInfo = getShiftInfo(employee.id, dateStr, 'morning', isRight);
+    const patternId = shiftInfo ? shiftInfo.kintai_pattern_id : 0;
+    const patternName = getPatternName(patternId);
+    
+    calendarHTML += `<td class="p-0 position-relative" data-employee-id="${employee.id}" data-date="${dateStr}" data-shift-time="morning">
+      <div class="shift-cell h-100 d-flex align-items-center justify-content-center text-center" 
+        data-shift="${patternName}" data-pattern-id="${patternId}" 
+        data-side="${isRight ? 'right' : 'left'}" data-employee="${employee.id}" 
+        data-date="${dateStr}" data-shift-time="morning">${patternName}</div>
+    </td>`;
+  }
+});
       
       // 備考セル、右端の日付と時間帯セル（朝の行）
       calendarHTML += `
@@ -923,15 +937,24 @@ container.innerHTML = calendarHTML;
         <td class="shift-time-label">昼</td>`;
       
       // 各従業員のシフトセル（昼）
-      employees.forEach(employee => {
-        const shiftInfo = getShiftInfo(employee.id, dateStr, 'day', isRight);
-        const patternId = shiftInfo ? shiftInfo.kintai_pattern_id : 0;
-        const patternName = getPatternName(patternId);
-        
-        calendarHTML += `<td data-employee-id="${employee.id}" data-date="${dateStr}" data-shift-time="day">
-          <div class="shift-cell" data-shift="${patternName}" data-pattern-id="${patternId}" data-side="${isRight ? 'right' : 'left'}" data-employee="${employee.id}" data-date="${dateStr}" data-shift-time="day">${patternName}</div>
-        </td>`;
-      });
+employees.forEach(employee => {
+  if (employee.name === "black_bar") {
+    // Bootstrapクラスを活用した区分線セル（昼）
+    calendarHTML += `<td class="divider-column p-0 border-left border-right border-secondary" 
+      data-employee-id="${employee.id}" data-date="${dateStr}" data-shift-time="afternoon"></td>`;
+  } else {
+    const shiftInfo = getShiftInfo(employee.id, dateStr, 'afternoon', isRight);
+    const patternId = shiftInfo ? shiftInfo.kintai_pattern_id : 0;
+    const patternName = getPatternName(patternId);
+    
+    calendarHTML += `<td class="p-0 position-relative" data-employee-id="${employee.id}" data-date="${dateStr}" data-shift-time="afternoon">
+      <div class="shift-cell h-100 d-flex align-items-center justify-content-center text-center" 
+        data-shift="${patternName}" data-pattern-id="${patternId}" 
+        data-side="${isRight ? 'right' : 'left'}" data-employee="${employee.id}" 
+        data-date="${dateStr}" data-shift-time="afternoon">${patternName}</div>
+    </td>`;
+  }
+});
       
       // 右端の時間帯（昼）- 備考と日付は朝の行で設定済み
       calendarHTML += `<td class="shift-time-label right-time-label">昼</td>`;
@@ -943,15 +966,24 @@ container.innerHTML = calendarHTML;
         <td class="shift-time-label">夜</td>`;
       
       // 各従業員のシフトセル（夜）
-      employees.forEach(employee => {
-        const shiftInfo = getShiftInfo(employee.id, dateStr, 'night', isRight);
-        const patternId = shiftInfo ? shiftInfo.kintai_pattern_id : 0;
-        const patternName = getPatternName(patternId);
-        
-        calendarHTML += `<td data-employee-id="${employee.id}" data-date="${dateStr}" data-shift-time="night">
-          <div class="shift-cell" data-shift="${patternName}" data-pattern-id="${patternId}" data-side="${isRight ? 'right' : 'left'}" data-employee="${employee.id}" data-date="${dateStr}" data-shift-time="night">${patternName}</div>
-        </td>`;
-      });
+employees.forEach(employee => {
+  if (employee.name === "black_bar") {
+    // Bootstrapクラスを活用した区分線セル（夜）
+    calendarHTML += `<td class="divider-column p-0 border-left border-right border-secondary" 
+      data-employee-id="${employee.id}" data-date="${dateStr}" data-shift-time="evening"></td>`;
+  } else {
+    const shiftInfo = getShiftInfo(employee.id, dateStr, 'evening', isRight);
+    const patternId = shiftInfo ? shiftInfo.kintai_pattern_id : 0;
+    const patternName = getPatternName(patternId);
+    
+    calendarHTML += `<td class="p-0 position-relative" data-employee-id="${employee.id}" data-date="${dateStr}" data-shift-time="evening">
+      <div class="shift-cell h-100 d-flex align-items-center justify-content-center text-center" 
+        data-shift="${patternName}" data-pattern-id="${patternId}" 
+        data-side="${isRight ? 'right' : 'left'}" data-employee="${employee.id}" 
+        data-date="${dateStr}" data-shift-time="evening">${patternName}</div>
+    </td>`;
+  }
+});
       
       // 右端の時間帯（夜）- 備考と日付は朝の行で設定済み
       calendarHTML += `<td class="shift-time-label right-time-label">夜</td>`;
@@ -991,6 +1023,15 @@ if (isRight && isFullscreen) {
     shiftCells.forEach(cell => {
       // デバッグ用にスタイルを追加
       cell.style.cursor = 'pointer';
+
+       // Bootstrapクラスで区分線セルを判別
+  if (cell.parentElement.classList.contains('divider-column') || 
+  cell.parentElement.classList.contains('border-secondary')) {
+return;
+}
+
+// Bootstrapのカーソルスタイル適用
+cell.classList.add('cursor-pointer');
       
       // シフトセルのクリックイベント
       cell.addEventListener('click', function(event) {
@@ -1044,6 +1085,10 @@ if (isRight && isFullscreen) {
         $('#patternSelectModal').modal('show');
       });
     });
+
+    // 代わりに新しい関数を呼び出す
+setupShiftCellEvents(container);
+
     
     // 初期の見た目を設定
     shiftCells.forEach(cell => {
@@ -1332,6 +1377,28 @@ async function updateCalendars() {
       });
     }
   });
+
+  // シフトセルクリックイベント処理関数
+  function setupShiftCellEvents(container) {
+    const shiftCells = container.querySelectorAll('.shift-cell');
+    
+    shiftCells.forEach(cell => {
+      // Bootstrapクラス対応の判定
+      if (cell.parentElement.classList.contains('divider-column') || 
+          cell.parentElement.classList.contains('border-secondary')) {
+        // 区分線セルはスキップ
+        return;
+      }
+      
+      // Bootstrapのポインタースタイル適用
+      cell.classList.add('cursor-pointer');
+      
+      // クリックイベント
+      cell.addEventListener('click', function(event) {
+        // 既存のコード...
+      });
+    });
+  }
 
   
 });
