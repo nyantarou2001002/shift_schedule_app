@@ -253,6 +253,21 @@ func ExportShiftExcelHandler(w http.ResponseWriter, r *http.Request) {
 	// 備考列を追加
 	memoCol := getColName(colIndex)
 	f.SetCellValue(sheetName, memoCol+"3", "備考")
+	colIndex++
+
+	// 備考列の右側に日付と曜日の列を追加
+	rightDateColIndex := colIndex
+	rightWeekdayColIndex := colIndex + 1
+	rightDateCol := getColName(rightDateColIndex)
+	rightWeekdayCol := getColName(rightWeekdayColIndex)
+
+	// 右端の日付と曜日のヘッダーを設定
+	f.SetCellValue(sheetName, rightDateCol+"3", "日付")
+	f.SetCellValue(sheetName, rightWeekdayCol+"3", "曜日")
+
+	// 日付と曜日の列を記録
+	allDateCols = append(allDateCols, rightDateCol)
+	allWeekdayCols = append(allWeekdayCols, rightWeekdayCol)
 
 	// ヘッダー行のスタイル
 	headerStyle, err := f.NewStyle(&excelize.Style{
@@ -277,8 +292,8 @@ func ExportShiftExcelHandler(w http.ResponseWriter, r *http.Request) {
 		},
 	})
 	if err == nil {
-		// ヘッダー行全体にスタイルを適用
-		headerRange := fmt.Sprintf("A3:%s3", memoCol)
+		// ヘッダー行全体にスタイルを適用（右端の日付・曜日列も含める）
+		headerRange := fmt.Sprintf("A3:%s3", rightWeekdayCol)
 		f.SetCellStyle(sheetName, "A3", headerRange, headerStyle)
 	}
 
@@ -360,7 +375,7 @@ func ExportShiftExcelHandler(w http.ResponseWriter, r *http.Request) {
 		for sectionIdx, empCols := range sectionEmpCols {
 			// 当該セクションの従業員列を処理
 			for colIdx, empCol := range empCols {
-				// 従業員の配列インデックスを計算（非効率だが例示のため）
+				// 従業員の配列インデックスを計算
 				empIndex := 0
 				for i := 0; i < sectionIdx; i++ {
 					// 前のセクションの従業員数 + 区分線（1）を加算
@@ -372,9 +387,27 @@ func ExportShiftExcelHandler(w http.ResponseWriter, r *http.Request) {
 
 				// 朝・昼・夜のシフトを取得して1つのセルにまとめる
 				if emp.ID > 0 {
-					morningShift, _ := getShiftForExcel(emp.ID, date, "morning")
-					dayShift, _ := getShiftForExcel(emp.ID, date, "afternoon")
-					eveningShift, _ := getShiftForExcel(emp.ID, date, "evening")
+					// 各時間帯のシフトデータを取得
+					morningShift, err := getShiftForExcel(emp.ID, date, "morning")
+					if err != nil {
+						log.Printf("朝のシフト取得エラー: 社員ID=%d, 日付=%s, エラー=%v",
+							emp.ID, date, err)
+						morningShift.PatternID = 0
+					}
+
+					dayShift, err := getShiftForExcel(emp.ID, date, "afternoon")
+					if err != nil {
+						log.Printf("昼のシフト取得エラー: 社員ID=%d, 日付=%s, エラー=%v",
+							emp.ID, date, err)
+						dayShift.PatternID = 0
+					}
+
+					eveningShift, err := getShiftForExcel(emp.ID, date, "evening")
+					if err != nil {
+						log.Printf("夜のシフト取得エラー: 社員ID=%d, 日付=%s, エラー=%v",
+							emp.ID, date, err)
+						eveningShift.PatternID = 0
+					}
 
 					// シフトパターン名を取得
 					morningPatternName := ""
@@ -382,28 +415,51 @@ func ExportShiftExcelHandler(w http.ResponseWriter, r *http.Request) {
 					eveningPatternName := ""
 
 					if morningShift.PatternID > 0 {
-						morningPatternName, _ = getPatternName(morningShift.PatternID)
+						morningPatternName, err = getPatternName(morningShift.PatternID)
+						if err != nil {
+							log.Printf("朝パターン名取得エラー: ID=%d, エラー=%v",
+								morningShift.PatternID, err)
+							morningPatternName = fmt.Sprintf("ID:%d", morningShift.PatternID)
+						}
 					}
+
 					if dayShift.PatternID > 0 {
-						dayPatternName, _ = getPatternName(dayShift.PatternID)
+						dayPatternName, err = getPatternName(dayShift.PatternID)
+						if err != nil {
+							log.Printf("昼パターン名取得エラー: ID=%d, エラー=%v",
+								dayShift.PatternID, err)
+							dayPatternName = fmt.Sprintf("ID:%d", dayShift.PatternID)
+						}
 					}
+
 					if eveningShift.PatternID > 0 {
-						eveningPatternName, _ = getPatternName(eveningShift.PatternID)
+						eveningPatternName, err = getPatternName(eveningShift.PatternID)
+						if err != nil {
+							log.Printf("夜パターン名取得エラー: ID=%d, エラー=%v",
+								eveningShift.PatternID, err)
+							eveningPatternName = fmt.Sprintf("ID:%d", eveningShift.PatternID)
+						}
 					}
 
 					// パターン名を1つにまとめる
 					combinedPattern := morningPatternName
 					if dayPatternName != "" && dayPatternName != morningPatternName {
 						if combinedPattern != "" {
-							combinedPattern += "→"
+							combinedPattern += " "
 						}
 						combinedPattern += dayPatternName
 					}
 					if eveningPatternName != "" && eveningPatternName != dayPatternName && eveningPatternName != morningPatternName {
 						if combinedPattern != "" {
-							combinedPattern += "→"
+							combinedPattern += " "
 						}
 						combinedPattern += eveningPatternName
+					}
+
+					// デバッグログ
+					if morningShift.PatternID > 0 || dayShift.PatternID > 0 || eveningShift.PatternID > 0 {
+						log.Printf("シフト設定: 社員ID=%d, 名前=%s, 日付=%s, パターン=[朝:%s, 昼:%s, 夜:%s], 結合=%s",
+							emp.ID, emp.Name, date, morningPatternName, dayPatternName, eveningPatternName, combinedPattern)
 					}
 
 					cellRef := fmt.Sprintf("%s%d", empCol, currentRow)
@@ -438,6 +494,19 @@ func ExportShiftExcelHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// 右端の日付・曜日列の左罫線も太くする
+	rightDividerStyle, _ := f.NewStyle(&excelize.Style{
+		Border: []excelize.Border{
+			{Type: "left", Color: "#000000", Style: 5}, // 太い実線
+		},
+	})
+
+	// 右端日付列に区分線スタイルを適用
+	for row := 3; row < 4+daysInMonth; row++ {
+		cellRef := fmt.Sprintf("%s%d", rightDateCol, row)
+		f.SetCellStyle(sheetName, cellRef, cellRef, rightDividerStyle)
+	}
+
 	// 備考セルのスタイルを改善
 	memoStyle, _ := f.NewStyle(&excelize.Style{
 		Alignment: &excelize.Alignment{
@@ -447,8 +516,8 @@ func ExportShiftExcelHandler(w http.ResponseWriter, r *http.Request) {
 		Border: []excelize.Border{
 			{Type: "top", Color: "#D0D0D0", Style: 1},
 			{Type: "bottom", Color: "#D0D0D0", Style: 1},
-			{Type: "left", Color: "#000000", Style: 1}, // 左罫線を強調
-			{Type: "right", Color: "#D0D0D0", Style: 1},
+			{Type: "left", Color: "#000000", Style: 1},  // 左罫線を強調
+			{Type: "right", Color: "#000000", Style: 1}, // 右罫線も強調
 		},
 	})
 
@@ -623,38 +692,6 @@ type ShiftData struct {
 	PatternID int
 }
 
-func getShiftForExcel(employeeID int, date, timeSlot string) (ShiftData, error) {
-	var data ShiftData
-
-	// まずシミュレーションデータを確認
-	err := db.DB.QueryRow(`
-        SELECT kintai_pattern_id 
-        FROM shifts_simulation 
-        WHERE staff_id = ? AND date = ? AND shift_time = ?
-    `, employeeID, date, timeSlot).Scan(&data.PatternID)
-
-	if err == nil {
-		return data, nil
-	}
-
-	if err != sql.ErrNoRows {
-		return data, err
-	}
-
-	// シミュレーションデータがなければ通常のシフトを確認（右側で削除されていないもの）
-	err = db.DB.QueryRow(`
-        SELECT kintai_pattern_id 
-        FROM shifts 
-        WHERE staff_id = ? AND date = ? AND shift_time = ? AND right_deleted = FALSE
-    `, employeeID, date, timeSlot).Scan(&data.PatternID)
-
-	if err != nil && err != sql.ErrNoRows {
-		return data, err
-	}
-
-	return data, nil
-}
-
 // 指定された日付の備考を取得
 func getMemoForDate(date string, isRight bool) (string, error) {
 	var content string
@@ -671,22 +708,6 @@ func getMemoForDate(date string, isRight bool) (string, error) {
 	return content, nil
 }
 
-// パターン名を取得
-func getPatternName(patternID int) (string, error) {
-	var name string
-	err := db.DB.QueryRow(`
-        SELECT pattern_name 
-        FROM kintai_patterns 
-        WHERE id = ?
-    `, patternID).Scan(&name)
-
-	if err != nil {
-		return "", err
-	}
-
-	return name, nil
-}
-
 // 日付が削除されているかどうかを確認する関数
 func isDateDeleted(date string) bool {
 	var exists bool
@@ -700,4 +721,85 @@ func isDateDeleted(date string) bool {
 	}
 
 	return exists
+}
+
+// シフト情報を取得
+func getShiftForExcel(employeeID int, date, timeSlot string) (ShiftData, error) {
+	var data ShiftData
+
+	// ログ出力
+	log.Printf("シフト取得: 社員ID=%d, 日付=%s, 時間帯=%s", employeeID, date, timeSlot)
+
+	// まずシミュレーションデータを確認
+	err := db.DB.QueryRow(`
+        SELECT kintai_pattern_id 
+        FROM shifts_simulation 
+        WHERE staff_id = ? AND date = ? AND shift_time = ?
+    `, employeeID, date, timeSlot).Scan(&data.PatternID)
+
+	if err == nil {
+		// シミュレーションデータが見つかった場合
+		log.Printf("シミュレーションシフト見つかりました: 社員ID=%d, 日付=%s, 時間帯=%s, パターンID=%d",
+			employeeID, date, timeSlot, data.PatternID)
+		return data, nil
+	}
+
+	if err != sql.ErrNoRows {
+		// クエリエラーの場合
+		log.Printf("シミュレーションシフト検索エラー: %v", err)
+	}
+
+	// シミュレーションデータがなければ通常のシフトを確認（右側で削除されていないもの）
+	err = db.DB.QueryRow(`
+        SELECT kintai_pattern_id 
+        FROM shifts 
+        WHERE staff_id = ? AND date = ? AND shift_time = ? AND right_deleted = FALSE
+    `, employeeID, date, timeSlot).Scan(&data.PatternID)
+
+	if err == nil {
+		// 通常シフトが見つかった場合
+		log.Printf("通常シフト見つかりました: 社員ID=%d, 日付=%s, 時間帯=%s, パターンID=%d",
+			employeeID, date, timeSlot, data.PatternID)
+		return data, nil
+	}
+
+	if err == sql.ErrNoRows {
+		// シフトが見つからない場合は空のデータを返す
+		data.PatternID = 0
+		return data, nil
+	}
+
+	// その他のエラーの場合
+	log.Printf("通常シフト検索エラー: %v", err)
+	data.PatternID = 0
+	return data, nil
+}
+
+// パターン名を取得
+func getPatternName(patternID int) (string, error) {
+	// パターンIDが0の場合（シフトなし）は空文字を返す
+	if patternID == 0 {
+		return "", nil
+	}
+
+	var name string
+	// テーブル名を kintai_patterns から kintai_pattern に修正
+	err := db.DB.QueryRow(`
+        SELECT pattern_name 
+        FROM kintai_pattern 
+        WHERE id = ?
+    `, patternID).Scan(&name)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			// パターンが見つからない場合、未定義と表示
+			log.Printf("パターンID %d が見つかりません。「未定義」と表示します。", patternID)
+			return "未定義", nil
+		}
+		log.Printf("パターン名取得エラー: %v", err)
+		return "未定義", nil
+	}
+
+	log.Printf("パターン名取得成功: ID=%d, 名前=%s", patternID, name)
+	return name, nil
 }
