@@ -550,7 +550,7 @@ func ExportShiftExcelHandler(w http.ResponseWriter, r *http.Request) {
 		// 区分線の左罫線を太くする
 		dividerStyle, _ := f.NewStyle(&excelize.Style{
 			Border: []excelize.Border{
-				{Type: "left", Color: "#000000", Style: 5}, // 太い実線
+				{Type: "left", Color: "#000000", Style: 1}, // 太い実線
 			},
 		})
 
@@ -564,7 +564,7 @@ func ExportShiftExcelHandler(w http.ResponseWriter, r *http.Request) {
 	// 右端の日付・曜日列の左罫線も太くする
 	rightDividerStyle, _ := f.NewStyle(&excelize.Style{
 		Border: []excelize.Border{
-			{Type: "left", Color: "#000000", Style: 5}, // 太い実線
+			{Type: "left", Color: "#000000", Style: 1}, // 太い実線
 		},
 	})
 
@@ -576,21 +576,21 @@ func ExportShiftExcelHandler(w http.ResponseWriter, r *http.Request) {
 
 	// 列幅の調整 - すべての日付と曜日の列
 	for _, dateCol := range allDateCols {
-		f.SetColWidth(sheetName, dateCol, dateCol, 8) // 日付列
+		f.SetColWidth(sheetName, dateCol, dateCol, 5) // 日付列
 	}
 	for _, weekdayCol := range allWeekdayCols {
-		f.SetColWidth(sheetName, weekdayCol, weekdayCol, 8) // 曜日列
+		f.SetColWidth(sheetName, weekdayCol, weekdayCol, 5) // 曜日列
 	}
 
 	// 従業員列の幅調整 - 各セクションの従業員列
 	for _, empCols := range sectionEmpCols {
 		for _, empCol := range empCols {
-			f.SetColWidth(sheetName, empCol, empCol, 12) // 従業員列
+			f.SetColWidth(sheetName, empCol, empCol, 8) // 従業員列
 		}
 	}
 
 	// 備考列の幅
-	f.SetColWidth(sheetName, memoCol, memoCol, 30) // 備考列
+	f.SetColWidth(sheetName, memoCol, memoCol, 10) // 備考列
 
 	// ヘッダーを全ページに表示
 	f.SetHeaderFooter(sheetName, &excelize.HeaderFooterOptions{
